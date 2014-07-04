@@ -1,6 +1,7 @@
 /*jshint strict:false */
 /*global angular:false */
 /*global L:false */
+L.Icon.Default.imagePath = 'images/';
 
 angular.module('osm.services').factory('leafletService',
     ['leafletData', function(leafletData){
