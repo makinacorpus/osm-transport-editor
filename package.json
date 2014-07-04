@@ -1,7 +1,7 @@
 {
-  "name": "gtfs2osm",
-  "description": "GTFS to OSM",
-  "repository": "https://github.com/makinacorpus/gtfs2osm",
+  "name": "osm-relation-editor",
+  "description": "OSM Relation editor",
+  "repository": "https://github.com/makinacorpus/osm-relation-editor",
   "devDependencies": {
     "bower": "*",
     "gulp": "*",
