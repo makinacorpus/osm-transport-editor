@@ -2,8 +2,6 @@
 /*global angular:false */
 
 'use strict';
-L.Icon.Default.imagePath = '/images/';
-
 
 // Declare app level module which depends on filters, and services
 angular.module('osm', [
@@ -28,6 +26,7 @@ angular.module('osm.directives', []);
 /*jshint strict:false */
 /*global angular:false */
 /*global L:false */
+L.Icon.Default.imagePath = 'images/';
 
 angular.module('osm.services').factory('leafletService',
     ['leafletData', function(leafletData){
