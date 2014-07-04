@@ -16,14 +16,14 @@
                 <td>
                   <div ng-if="member.type === 'relation'">
                     <a class="btn btn-default"
-                     ng-click="setCurrentMember(member)">[{{member.type}}] {{member.name}} ({{member.ref}})</a>
+                     ng-click="setCurrentRelation(member)">[{{member.type}}] {{member.name}} ({{member.ref}})</a>
                   </div>
                   <div ng-if="member.type !== 'relation'">
                     <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}} {{member.name}}</a>
                   </div>
                 </td>
                 <td>
-
+                  <button class="btn btn-default" ng-click="displayMember(member)">Display on map</button>
                 </td>
               </tr>
             </table>
@@ -48,16 +48,15 @@
 
   </div>
   <div class="col-md-6" ng-controller="LeafletController">
-    <leaflet center="center" layers="layers" width="100%" height="600" geojson="leafletGeojson"></leaflet>
+    <leaflet center="center" markers="markers" layers="layers" width="100%" height="600" geojson="leafletGeojson"></leaflet>
     <table class="table table-bordered">
       <tr>
         <th>Categories</th>
         <th>Actions</th>
       </tr>
-      <tr>
+      <tr ng-show="zoomLevel > 15">
         <td>Loading data (OSM API)</td>
         <td>
-          <p class="help-block">Only for high level zoom</p>
           <a class="btn btn-default" ng-click="loadOSMNodes()" translate>Load nodes</a>
           <a class="btn btn-default" ng-click="loadOSMWays()" translate>Load ways</a>
           <a class="btn btn-default" ng-click="loadOSMBusStop()" translate>Load bus stop</a>
@@ -74,6 +73,7 @@
         <td>Modify relation</td>
         <td>
           <button ng-show="currentNode" class="btn btn-primary" ng-click="addNodeToRelation(currentNode)">Add {{currentNode.id}} to relation</button>
+          <button ng-show="currentMember" class="btn btn-danger" ng-click="removeMemberFromRelation(currentMember)">Remove {{currentMember.id}} from relation</button>
         </td>
       </tr>
       <tr>
