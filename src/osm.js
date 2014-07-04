@@ -151,6 +151,7 @@ angular.module('osm.services').factory('osmService',
                             feature = {
                                 type: 'Feature',
                                 properties:node.tags,
+                                id: node.id,
                                 geometry: {
                                     type:'Point',
                                     coordinates: [node.lon, node.lat]
@@ -164,6 +165,7 @@ angular.module('osm.services').factory('osmService',
                             feature = {
                                 type: 'Feature',
                                 properties:node.tags,
+                                id: node.id,
                                 geometry: {
                                     type:'LineString',
                                     coordinates: coordinates
@@ -386,6 +388,7 @@ angular.module('osm.services').factory('osmService',
                             feature = {
                                 type: 'Feature',
                                 properties: properties,
+                                id: m.getAttribute('ref'),
                                 geometry:{
                                     type:'LineString',
                                     coordinates:coordinates
@@ -406,6 +409,7 @@ angular.module('osm.services').factory('osmService',
                             feature = {
                                 type: 'Feature',
                                 properties: properties,
+                                id: m.getAttribute('ref'),
                                 geometry:{
                                     type:'Point',
                                     coordinates:[

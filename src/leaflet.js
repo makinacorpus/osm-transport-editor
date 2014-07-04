@@ -110,7 +110,7 @@ angular.module('osm.controllers').controller('LeafletController',
         $scope.overpassToLayer = function(query, filter){
             osmService.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
-                    L.geoJson(geojson).addTo(map);
+                    L.geoJson(geojson, osmGEOJSONOptions).addTo(map);
                 });
             });
         };
@@ -197,8 +197,14 @@ angular.module('osm.controllers').controller('LeafletController',
                 });
             });
         };
+        //bind events
         $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
             $scope.currentNode = featureSelected;
+        });
+        leafletService.getMap().then(function(map){
+            map.on('zoomend', function(e){
+                $scope.zoomLevel = map.getZoom();
+            });
         });
     }]
 );
