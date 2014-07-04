@@ -1,0 +1,9 @@
+/osm-relation-editor.sublime-project
+/osm-relation-editor.sublime-workspace
+/bower_components
+logs/*
+!.gitkeep
+node_modules/
+tmp
+.DS_Store
+.idea

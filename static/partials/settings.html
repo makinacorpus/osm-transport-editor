@@ -1,0 +1,78 @@
+<div id="maps-wrapper" class="row" ng-controller="SettingsController">
+    <div class="col-md-6">
+        <accordion>
+            <accordion-group heading="Configuration">
+                <div>
+                    <tabset>
+                        <tab heading="URL">
+                            <div class="form-group">
+                                <label>Source</label>
+                                <p class="help-block">Relation ID</p>
+                                <div class="input-group margin-bottom-sm" ui-keypress="{13:'reloadSettings()'}">
+                                    <input type="text" class="form-control" ng-model="settings.relationMaster" />
+                                    <span class="input-group-addon">
+                                        <i class="fa fa-refresh fa-spin" ng-show="loading.source"></i>
+                                        <i class="fa fa-check fa-fw text-success" ng-show="loading.sourcesuccess"></i>
+                                        <i class="fa fa-times fa-fw text-danger" ng-show="loading.sourceerror"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </tab>
+                        <tab heading="OSM Filters">
+
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+
+                                    <p class="help-block">You can write angular expression to filter nodes from OSM database. For more information about angular expression please read the following <a href="https://docs.angularjs.org/guide/expression">Angular Expressions</a>
+                                    </p>
+                                    <table class="table table-condensed">
+                                        <tr ng-repeat="f in settings.osmfilter track by $index">
+                                            <td width="20px">
+                                                <button class="btn btn-danger" ng-click="deleteOSMFilter(f)"><i class="fa fa-times-circle-o"></i>
+                                                </button>
+                                            </td>
+                                            <td>
+                                                <input class="form-control" type="text" ng-model="f" />
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td>
+                                                <input type="text" class="form-control" ng-model="newOSMFilterExpr" placeholder="value expression" />
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <button class="btn btn-default" ng-click="addOSMFilter(newOSMFilterExpr)">Add filter</button>
+                                </div>
+                            </div>
+                        </tab>
+                    </tabset>
+                </div>
+
+            </accordion-group>
+        </accordion>
+    </div>
+    <div class="col-md-3">
+        <button ng-show="!settings.changesetID" class="btn btn-default" ng-click="createChangeset()">Create change set</button>
+        <button class="btn btn-default" ng-click="getLastOpenedChangesetId()">get Changeset</button>
+        <button ng-show="settings.changesetID" class="btn btn-primary" ng-click="closeChangeset()">Save (close changeset {{settings.changesetID}})</button>
+    </div>
+    <div class="col-md-3" ng-controller="LoginController">
+        <div class="panel panel-default" ng-show="s">
+            <button class="form-control btn btn-danger" ng-click="logout()">Logout</button>
+        </div>
+
+        <div class="panel panel-default" ng-show="!loggedin" ui-keypress="{13:'login()'}">
+            <div class="panel-heading" translate>OSM Login</div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <input type="text" name="username" class="form-control" ng-model="settings.username" placeholder="username" />
+                </div>
+                <div class="form-group" ng-hide="loggedin">
+                    <input type="password" name="password" class="form-control" ng-model="mypassword" />
+                    <button class="form-control btn btn-primary" ng-click="login()">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
