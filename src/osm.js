@@ -568,6 +568,22 @@ angular.module('osm.services').factory('osmService',
                 }
                 if (members.length === sorted.length){
                     relationGeoJSON.members = sorted;
+                    //Fix orders of features
+                    var features = relationGeoJSON.features;
+                    var cache = {loaded:false};
+                    var getFeatureById = function(id){
+                        if (!cache.loaded){
+                            for (var i = 0; i < features.length; i++) {
+                                cache[features[i].id] = features[i];
+                            }
+                        }
+                        return cache[id];
+                    };
+                    relationGeoJSON.features = [];
+                    for (var i = 0; i < sorted.length; i++) {
+                        relationGeoJSON.features.push(getFeatureById(sorted[i].ref));
+                    }
+                    //feature order fixed
                 }else{
                     console.error('can t sort this relation');
                 }

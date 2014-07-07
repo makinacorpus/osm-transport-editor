@@ -33,6 +33,7 @@ angular.module('osm.controllers').controller('RelationController',
         };
         var moveMember = function(from, to) {
             $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
+            $scope.relationGeoJSON.features.splice(to, 0, $scope.relationGeoJSON.features.splice(from, 1)[0]);
         };
         $scope.moveMemberUp = function(member){
             var index = $scope.members.indexOf(member);
@@ -43,10 +44,14 @@ angular.module('osm.controllers').controller('RelationController',
             moveMember(index, index+1);
         };
         $scope.removeMemberFromRelation = function(member){
-            var index = $scope.relationGeoJSON.features.indexOf(member);
-            $scope.relationGeoJSON.features.splice(index, 1);
+            var index = $scope.members.indexOf(member);
             $scope.members.splice(index, 1);
-            //FIX: redraw the map ?
+            $scope.relationGeoJSON.features.splice(index, 1);
+            leafletService.addGeoJSONLayer(
+                'relation',
+                $scope.relationGeoJSON,
+                $scope.relationGeoJSON.options
+            );
         };
         var cache = {};
         var getRelationFeatureById = function(id){
@@ -136,7 +141,7 @@ angular.module('osm.controllers').controller('RelationController',
             $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relationGeoJSON);
             osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
-                    debugger;
+                    $scope.relationGeoJSON.properties.version = data;
                 }
             );
         };
