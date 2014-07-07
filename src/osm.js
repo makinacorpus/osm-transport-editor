@@ -1,7 +1,11 @@
 /*jshint strict:false */
 /*global angular:false */
 
-
+angular.module('osm').filter('slice', function() {
+    return function(arr, start, end) {
+        return (arr || []).slice(start, end);
+    };
+});
 angular.module('osm.services').factory('osmService',
     ['$base64', '$http', '$q', 'settingsService',
     function ($base64, $http, $q, settingsService) {
@@ -341,6 +345,18 @@ angular.module('osm.services').factory('osmService',
                 }
                 return tags;
             },
+            getNameFromTags: function(element){
+                var children;
+                for (var i = 0; i < element.children.length; i++) {
+                    children = element.children[i];
+                    if (children.tagName !== 'tag'){
+                        continue;
+                    }
+                    if (children.getAttribute('k') === 'name'){
+                        return children.getAttribute('v');
+                    }
+                }
+            },
             relationXmlToGeoJSON: function(relationID, relationXML){
                 var self = this;
                 var features = [];
@@ -561,6 +577,7 @@ angular.module('osm.services').factory('osmService',
                         }
                     }
                     if (!foundFirst && !foundLast){
+                        //cas du rond point ... ?
                         console.log('not found connected ways for '+m.ref);
                         console.log(cfirst);
                         console.log(clast);
