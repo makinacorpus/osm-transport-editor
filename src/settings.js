@@ -21,10 +21,43 @@ angular.module('osm.services').factory('settingsService',
     }]
 );
 angular.module('osm.controllers').controller('SettingsController',
-	['$scope', 'settingsService',
-	function($scope, settingsService){
+	['$scope', '$routeParams', 'settingsService', 'osmService',
+	function($scope, $routeParams, settingsService, osmService){
 		console.log('init SettingsController');
         $scope.settings = settingsService.settings;
+        $scope.comment = 'Working on relation '+$routeParams.relationid;
+        $scope.createChangeset = function(){
+            osmService.createChangeset($scope.comment).then(
+                function(data){
+                    $scope.settings.changesetID = data;
+                }
+            );
+        };
+        $scope.getLastOpenedChangesetId = function(){
+            osmService.getLastOpenedChangesetId().then(function(data){
+                $scope.settings.changesetID = data;
+            });
+        };
+        $scope.closeChangeset = function(){
+            osmService.closeChangeset().then(
+                function(){
+                    $scope.settings.changesetID = undefined;
+                }
+            );
+
+        };
+        if ($scope.settings.credentials && $scope.settings.username){
+            //validate credentials
+            osmService._credentials = $scope.settings.credentials;
+            osmService._login = $scope.settings.username;
+            osmService.validateCredentials().then(function(loggedin){
+                $scope.loggedin = loggedin;
+                if ($scope.settings.changesetID !== ''){
+                    $scope.getLastOpenedChangesetId();
+                }
+            });
+        }
+
 	}]
 );
 

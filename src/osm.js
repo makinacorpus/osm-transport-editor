@@ -88,7 +88,7 @@ angular.module('osm.services').factory('osmService',
                     config = {};
                 }
                 config.headers = {Authorization: this.getAuthorization()};
-                $http.put(self.API + method, content, config).then(function(data){
+                $http.put(settingsService.settings.API + method, content, config).then(function(data){
                     var contentType = data.headers()['content-type'];
                     var results;
                     if (contentType.indexOf('application/xml;') === 0){
@@ -192,10 +192,10 @@ angular.module('osm.services').factory('osmService',
                 settingsService.settings.nodes = xmlNodes;
                 return osmtogeojson(xmlNodes, {flatProperties: true});
             },
-            createChangeset: function(sourceURI){
+            createChangeset: function(comment){
                 var deferred = $q.defer();
-                var changeset = '<osm><changeset><tag k="created_by" v="OSMFusion"/><tag k="comment" v="';
-                changeset += 'Import data from ' + sourceURI + '"/></changeset></osm>';
+                var changeset = '<osm><changeset><tag k="created_by" v="OSM-Relation-Editor"/><tag k="comment" v="';
+                changeset += comment + '"/></changeset></osm>';
                 this.put('/0.6/changeset/create', changeset).then(function(data){
                     settingsService.settings.changeset = data;
                     deferred.resolve(data);
@@ -348,10 +348,19 @@ angular.module('osm.services').factory('osmService',
                     type: 'FeatureCollection',
                     tags: [],
                     members:[],
+                    properties: {
+                        id: relationID
+                    },
                     options: {},
                     features: features
                 };
                 var relation = relationXML.getElementById(relationID);
+                result.properties.visible = relation.getAttribute('visible');
+                result.properties.version = relation.getAttribute('version');
+                result.properties.changeset = relation.getAttribute('changeset');
+                result.properties.timestamp = relation.getAttribute('timestamp');
+                result.properties.user = relation.getAttribute('user');
+                result.properties.uid = relation.getAttribute('uid');
                 var m, i;
                 var child, node, properties, coordinates, feature, member, memberElement, tags;
                 for (i = 0; i < relation.children.length; i++) {
@@ -432,6 +441,35 @@ angular.module('osm.services').factory('osmService',
                     }
                 }
                 return result;
+            },
+            relationGeoJSONToXml: function(relationGeoJSON){
+                var i;
+                var pp = relationGeoJSON.properties;
+                var members = relationGeoJSON.members;
+                var settings = settingsService.settings;
+                var output = '<?xml version="1.0" encoding="UTF-8"?>\n';
+                output += '<osm version="0.6" generator="CGImap 0.3.3 (31468 thorn-01.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">\n';
+                output += '  <relation id="'+ pp.id + '" visible="' + pp.visible + '" ';
+                output += 'version="' + pp.version + '" ';
+                output += 'changeset="'+settings.changeset +'" timestamp="' + new Date().toISOString() + '" ';
+                output += 'user="' + settings.username + '" uid="' + pp.uid + '">\n';
+
+                for (i = 0; i < members.length; i++) {
+                    output += '    <member type="'+ members[i].type +'" ';
+                    output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
+                }
+
+                var tags = relationGeoJSON.tags;
+                for (i = 0; i < tags.length; i++) {
+                    output += '    <tag k="'+ tags[i].k +'" v="'+tags[i].v +'"/>\n';
+                }
+                output += '  </relation>\n';
+                output += '</osm>';
+                return output;
+            },
+            sortRelationMembers: function(relationGeoJSON){
+                //sort members
+                var members = relationGeoJSON.members;
             }
         };
         return service;

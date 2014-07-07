@@ -24,19 +24,29 @@ angular.module('osm.controllers').controller('RelationController',
         $scope.members = [];
         $scope.tags = [];
         $scope.markers = {};
+        $scope.displayedMember = 0;
+        $scope.currentNode = '';
         $scope.setCurrentRelation = function(member){
             if (member.type === 'relation'){
                 $location.path('/relation/'+member.ref);
             }
         };
-        $scope.addNodeToRelation = function(node){
-            //1. find the way that is attached to this one.
-            //2. create the dom element and attach it to $scope.relationDOM;
-            //3. put -> OSM
-            debugger;
+        var moveMember = function(from, to) {
+            $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
+        };
+        $scope.moveMemberUp = function(member){
+            var index = $scope.members.indexOf(member);
+            moveMember(index, index-1);
+        };
+        $scope.moveMemberDown = function(member){
+            var index = $scope.members.indexOf(member);
+            moveMember(index, index+1);
         };
         $scope.removeMemberFromRelation = function(member){
-
+            var index = $scope.relationGeoJSON.features.indexOf(member);
+            $scope.relationGeoJSON.features.splice(index, 1);
+            $scope.members.splice(index, 1);
+            //FIX: redraw the map ?
         };
         var cache = {};
         var getRelationFeatureById = function(id){
@@ -71,37 +81,64 @@ angular.module('osm.controllers').controller('RelationController',
             popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
         };
         $scope.displayMember = function(member){
-            var c = getRelationFeatureById(member.ref).geometry.coordinates;
-            $scope.markers = {
-                start: {
-                    id: undefined,
-                    icon: startIcon,
-                    lng: c[0][0],
-                    lat: c[0][1],
-                    focus: true,
-                    draggable: false
-                },
-                end: {
-                    id: undefined,
-                    icon: endIcon,
-                    lng: c[c.length-1][0],
-                    lat: c[c.length-1][1],
-                    focus: false,
-                    draggable: false
-                }
-            };
+            $scope.displayedMember = member.ref;
+            $scope.currentMember = getRelationFeatureById(member.ref);
+            var center = [];
+            var c = $scope.currentMember.geometry.coordinates;
+            if ($scope.currentMember.geometry.type === 'LineString'){
+                center = [c[0][1], c[0][0]];
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0][0],
+                        lat: c[0][1],
+                        focus: true,
+                        draggable: false
+                    },
+                    end: {
+                        id: undefined,
+                        icon: endIcon,
+                        lng: c[c.length-1][0],
+                        lat: c[c.length-1][1],
+                        focus: false,
+                        draggable: false
+                    }
+                };                
+            }else if($scope.currentMember.geometry.type === 'Point'){
+                center = [c[1], c[0]];
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0],
+                        lat: c[1],
+                        focus: true,
+                        draggable: false
+                    }
+                };
+            }
             leafletService.getMap().then(function(map){
                 var zoom = map.getZoom();
                 if (zoom < 17){
                     zoom = 17;
                 }
-                map.setView(L.latLng(c[0][1], c[0][0]), zoom);
+                map.setView(L.latLng(center[0], center[1]), zoom);
             });
         };
         var onEachFeature = function(feature, layer) {
             layer.on('click', function (e) {
                 $scope.currentMember = feature;
+                $scope.displayedMember = feature.id;
             });
+        };
+        $scope.saveRelation = function(){
+            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relationGeoJSON);
+            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+                .then(function(data){
+                    debugger;
+                }
+            );
         };
         var initialize = function(){
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
@@ -124,6 +161,7 @@ angular.module('osm.controllers').controller('RelationController',
                     }
                     $scope.relationGeoJSON.options.onEachFeature = onEachFeature;
                     leafletService.addGeoJSONLayer(
+                        'relation',
                         $scope.relationGeoJSON,
                         $scope.relationGeoJSON.options
                     );

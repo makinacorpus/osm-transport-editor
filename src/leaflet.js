@@ -21,18 +21,20 @@ angular.module('osm.services').factory('leafletService',
                     }
                 }
             },
-            geojsonLayers: [],
+            geojsonLayers: {},
             markers: [],
             getMap: function(id){
                 return leafletData.getMap(id);
             },
-            addGeoJSONLayer: function(geojson, options){
-                var layer = L.geoJson(geojson, options);
-                this.geojsonLayers.push(geojson);
+            addGeoJSONLayer: function(id, geojson, options){
+                var self = this;
+                var oldLayer = this.geojsonLayers[id];
+                self.geojsonLayers[id] = L.geoJson(geojson, options);
                 leafletData.getMap().then(function(map){
-                    if (!map.hasLayer(layer)){
-                        layer.addTo(map);
+                    if (map.hasLayer(oldLayer)){
+                        map.removeLayer(oldLayer);
                     }
+                    self.geojsonLayers[id].addTo(map);
                 });
             }
         };
@@ -107,10 +109,22 @@ angular.module('osm.controllers').controller('LeafletController',
             });
             return deferred.promise;
         };
+        $scope.removeOverpassLayer = function(){
+            leafletService.getMap().then(function(map){
+                if ($scope.overpassLayer !== undefined){
+                    map.removeLayer($scope.overpassLayer);
+                }
+                $scope.overpassLayer = undefined;
+            });
+        };
         $scope.overpassToLayer = function(query, filter){
             osmService.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
-                    L.geoJson(geojson, osmGEOJSONOptions).addTo(map);
+                    if ($scope.overpassLayer !== undefined){
+                        map.removeLayer($scope.overpassLayer);
+                    }
+                    $scope.overpassLayer = L.geoJson(geojson, osmGEOJSONOptions);
+                    $scope.overpassLayer.addTo(map);
                 });
             });
         };
@@ -196,6 +210,22 @@ angular.module('osm.controllers').controller('LeafletController',
                     };
                 });
             });
+        };
+        $scope.addNodeToRelation = function(){
+            
+            var features = $scope.relationGeoJSON.features;
+            features.push($scope.currentNode);
+            $scope.members.push({
+                type: $scope.currentNode.geometry.type === 'LineString' ? 'way' : 'node',
+                ref: $scope.currentNode.id,
+                role: ''
+            });
+            leafletService.addGeoJSONLayer(
+                'relation',
+                $scope.relationGeoJSON,
+                $scope.relationGeoJSON.options
+            );
+
         };
         //bind events
         $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
