@@ -735,6 +735,107 @@ angular.module('osm.services').factory('osmService',
             sortRelationMembers: function(relationGeoJSON){
                 //sort members
                 var members = relationGeoJSON.members;
+                var features = relationGeoJSON.features;
+                var sorted = [];
+                var f,i,m,j,k;
+                var currentFirst, currentLast, first, last;
+                var insertBefore = function(item){
+                    console.log('insert '+ item.ref + ' before');
+                    sorted.splice(0, 0, item);
+                };
+                var insertAfter = function(item){
+                    console.log('insert '+item.ref + ' after');
+                    sorted.push(item);
+                };
+                var getCoordinates = function(i){
+                    return features[i].geometry.coordinates;
+                };
+                var c, cfirst, clast, alreadySorted;
+                var foundFirst, foundLast = false;
+                for (i = 0; i < members.length; i++) {
+                    console.log(i);
+                    m = members[i];
+                    if (m.type !== 'way'){
+                        sorted.push(m);
+                        continue;
+                    }
+                    //check if the member is already in
+                    alreadySorted = false;
+                    for (k = 0; k < sorted.length; k++) {
+                        if (sorted[k].ref === m.ref){
+                            alreadySorted = true;
+                        }
+                    }
+                    if (alreadySorted){
+                        continue;
+                    }
+                    if (sorted.length === 0){
+                        sorted.push(m);
+                        c = getCoordinates(i);
+                        cfirst = c[0];
+                        clast = c[c.length-1];
+                    }
+//                    console.log('cfirst ' +cfirst);
+//                    console.log('clast '+ clast);
+                    foundFirst = foundLast = false;
+                    for (j = 0; j < features.length; j++) {
+                        f = features[j];
+                        if (f.geometry.type !== 'LineString'){
+                            continue;
+                        }
+                        alreadySorted = false;
+                        for (k = 0; k < sorted.length; k++) {
+                            if (sorted[k].ref === f.id){
+                                alreadySorted = true;
+                            }
+                        }
+                        if (alreadySorted){
+                            continue;
+                        }
+
+                        c = getCoordinates(j);
+                        first = c[0];
+                        last = c[c.length-1];
+                        if (i===0){
+                            console.log(m.ref + ' ' + first + ' / ' + last);
+                        }
+                        if (cfirst[0] === last[0] && cfirst[1] === last[1]){
+                            insertBefore(members[j]);
+                            cfirst = first;
+                            foundFirst = true;
+                            continue;
+                        }
+                        if (clast[0] === first[0] && clast[1] === first[1]){
+                            insertAfter(members[j]);
+                            clast = last;
+                            foundLast = true;
+                            continue;
+                        }
+                        //weird; order of linestring coordinates is not stable
+                        if (cfirst[0] === first[0] && cfirst[1] === first[1]){
+                            insertBefore(members[j]);
+                            cfirst = last;
+                            foundFirst = true;
+                            continue;
+                        }
+                        if (clast[0] === last[0] && clast[1] === last[1]){
+                            insertAfter(members[j]);
+                            clast = first;
+                            foundLast = true;
+                            continue;
+                        }
+                    }
+                    if (!foundFirst && !foundLast){
+                        console.log('not found connected ways for '+m.ref);
+                        console.log(cfirst);
+                        console.log(clast);
+                    }
+                }
+                if (members.length === sorted.length){
+                    relationGeoJSON.members = sorted;
+                }else{
+                    console.error('can t sort this relation');
+                }
             }
         };
         return service;
@@ -882,6 +983,10 @@ angular.module('osm.controllers').controller('RelationController',
                     debugger;
                 }
             );
+        };
+        $scope.sortRelationMembers = function(){
+            osmService.sortRelationMembers($scope.relationGeoJSON);
+            $scope.members = $scope.relationGeoJSON.members;
         };
         var initialize = function(){
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){

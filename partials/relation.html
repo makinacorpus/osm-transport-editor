@@ -7,6 +7,19 @@
       <div class="panel-body">
         <h1>{{relationName}}</h1>
         <button class="btn btn-primary" ng-click="saveRelation()">Save</button>
+        <button class="btn btn-default" ng-click="sortRelationMembers()">Sort relation's ways</button>
+        <a target="_blank" ng-href="https://openstreetmap.org/relation/{{relationID}}" translate>OSM</a>
+        <a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{relationID}}" translate>iD</a>
+        <a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{relationID}}" translate>Potlatch2</a>
+        <a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{relationID}}/full" translate>JOSM</a>
+        <a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{relationID}}" translate>History</a>
+        <a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{relationID}}" translate>Analyse</a>
+        <a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{relationID}}" translate>Analyse fr</a>
+        <a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{relationID}}" translate>Manage</a>
+        <a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{relationID}}" translate>GPX</a>
+
+
+
         <tabset>
           <tab heading="members {{members.length}}">
             <div class="form-group">
@@ -97,6 +110,11 @@
         </td>
       </tr>
     -->
+      <tr>
+        <td>Edit area in</td>
+        <td>
+          <a target="_blank" ng-href="http://www.openstreetmap.org/edit#map={{center.zoom}}/{{center.lat}}/{{center.lng}}" translate>iD</a>
+
       <tr ng-show="currentNode">
         <td>Selected item</td>
         <td>
