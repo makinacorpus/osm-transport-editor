@@ -236,8 +236,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 });
             });
         };
-        $scope.addNodeToRelation = function(){
-            
+        $scope.addNodeToRelation = function(node, newIndex){
             var features = $scope.relationGeoJSON.features;
             features.push($scope.currentNode);
             $scope.members.push({
@@ -245,12 +244,14 @@ angular.module('osm.controllers').controller('LeafletController',
                 ref: $scope.currentNode.id,
                 role: ''
             });
+            if (!isNaN(newIndex)){
+                $scope.moveMemberFromIndexToIndex($scope.members.length-1, newIndex);
+            }
             leafletService.addGeoJSONLayer(
                 'relation',
                 $scope.relationGeoJSON,
                 $scope.relationGeoJSON.options
             );
-
         };
         //bind events
         $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
@@ -903,6 +904,7 @@ angular.module('osm.controllers').controller('RelationController',
         $scope.markers = {};
         $scope.displayedMember = 0;
         $scope.currentNode = '';
+        $scope.loading = {};
         $scope.setCurrentRelation = function(member){
             if (member.type === 'relation'){
                 $location.path('/relation/'+member.ref);
@@ -1014,11 +1016,24 @@ angular.module('osm.controllers').controller('RelationController',
                 $scope.displayedMember = feature.id;
             });
         };
+        $scope.loading.saving = false;
+        $scope.loading.savingsuccess = false;
+        $scope.loading.savingerror = false;
         $scope.saveRelation = function(){
+            $scope.loading.saving = true;
+            $scope.loading.savingsuccess = false;
+            $scope.loading.savingerror = false;
             $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relationGeoJSON);
             osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
                     $scope.relationGeoJSON.properties.version = data;
+                    $scope.loading.saving = false;
+                    $scope.loading.savingsuccess = true;
+                    $scope.loading.savingerror = false;
+                }, function(error){
+                    $scope.loading.saving = false;
+                    $scope.loading.savingsuccess = false;
+                    $scope.loading.savingerror = true;
                 }
             );
         };
@@ -1056,6 +1071,9 @@ angular.module('osm.controllers').controller('RelationController',
             return $scope.start !== 0;
         };
         $scope.moveMemberFromIndexToIndex = function(oldIndex, newIndex){
+            if (isNaN(oldIndex) || isNaN(newIndex)){
+                return;
+            }
             var member = $scope.members.splice(oldIndex, 1)[0];
             $scope.members.splice(newIndex, 0, member);
         };

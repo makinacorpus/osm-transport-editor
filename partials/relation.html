@@ -7,7 +7,11 @@
       <div class="panel-body">
         <h1>{{relationName}}</h1>
         <div class="form-group pull-right">
-          <button class="btn btn-primary" ng-click="saveRelation()">Save</button>
+          <button class="btn btn-primary" ng-click="saveRelation()">Save
+            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
+            <i class="fa fa-check fa-fw text-success ng-hide" ng-show="loading.savingsuccess"></i>
+            <i class="fa fa-times fa-fw text-danger ng-hide" ng-show="loading.savingerror"></i>
+          </button>
         </div>
         <div class="form-group">
           <a target="_blank" ng-href="https://openstreetmap.org/relation/{{relationID}}" translate>OSM</a>
@@ -63,7 +67,7 @@
                 </td>
                 <td>
                   <div ng-if="member.type === 'relation'">
-                    relation/
+                    [{{members.indexOf(member)}}] relation/
                     <a class="btn btn-default" ng-click="setCurrentRelation(member)">{{member.ref}}</a> {{member.name}}
                   </div>
                   <div ng-if="member.type !== 'relation'">
@@ -84,16 +88,14 @@
                   Display All / batch
               </button>
             </div>
-                            {{moveFromIndex}} {{moveToIndex}}
-
-            <div class="form-inline" role="form">
+            <div class="form-inline">
               <div class="form-group">
-                <input type="number" class="form-control" placeholder="From index" ng-model="moveFromIndex"/>
+                <input ng-model="oldIndex" type="number" class="form-control" placeholder="From index"/>
               </div>
               <div class="form-group">
-                <input type="number" class="form-control" placeholder="To index" ng-model="moveToIndex"/>
+                <input ng-model="newIndex" type="number" class="form-control" placeholder="To index"/>
               </div>
-              <button class="btn btn-default" ng-click="moveMemberFromIndexToIndex(moveFromIndex, moveToIndex)">Move</button>
+              <button class="btn btn-default" ng-click="moveMemberFromIndexToIndex(oldIndex, newIndex)">Move</button>
             </div>
           </tab>
           <tab heading="tags {{tags.length}}">
@@ -205,16 +207,6 @@
         <th>Categories</th>
         <th>Actions</th>
       </tr>
-<!--
-      <tr ng-show="zoomLevel > 15">
-        <td>Loading data (OSM API)</td>
-        <td>
-          <a class="btn btn-default" ng-click="loadOSMNodes()" translate>Load nodes</a>
-          <a class="btn btn-default" ng-click="loadOSMWays()" translate>Load ways</a>
-          <a class="btn btn-default" ng-click="loadOSMBusStop()" translate>Load bus stop</a>
-        </td>
-      </tr>
-    -->
       <tr>
         <td>Edit area in</td>
         <td>
@@ -223,7 +215,13 @@
       <tr ng-show="currentNode">
         <td>Selected item</td>
         <td>
-          <button ng-show="currentNode" class="btn btn-primary btn-lg" ng-click="addNodeToRelation(currentNode)">Add {{currentNode.id}} to relation</button>
+          <div class="form-inline">
+            <button ng-show="currentNode" class="btn btn-primary btn-lg" ng-click="addNodeToRelation(currentNode, newIndex)">Add {{currentNode.id}} to relation
+            </button>
+            <div class="form-group">
+              <input class="form-control" type="number" ng-model="newIndex" placeholder="At index (number)"/>
+            </div>
+          </div>
         </td>
       </tr>
       <tr>
