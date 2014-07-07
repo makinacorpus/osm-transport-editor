@@ -46,18 +46,20 @@ angular.module('osm.services').factory('leafletService',
                     }
                 }
             },
-            geojsonLayers: [],
+            geojsonLayers: {},
             markers: [],
             getMap: function(id){
                 return leafletData.getMap(id);
             },
-            addGeoJSONLayer: function(geojson, options){
-                var layer = L.geoJson(geojson, options);
-                this.geojsonLayers.push(geojson);
+            addGeoJSONLayer: function(id, geojson, options){
+                var self = this;
+                var oldLayer = this.geojsonLayers[id];
+                self.geojsonLayers[id] = L.geoJson(geojson, options);
                 leafletData.getMap().then(function(map){
-                    if (!map.hasLayer(layer)){
-                        layer.addTo(map);
+                    if (map.hasLayer(oldLayer)){
+                        map.removeLayer(oldLayer);
                     }
+                    self.geojsonLayers[id].addTo(map);
                 });
             }
         };
@@ -132,10 +134,22 @@ angular.module('osm.controllers').controller('LeafletController',
             });
             return deferred.promise;
         };
+        $scope.removeOverpassLayer = function(){
+            leafletService.getMap().then(function(map){
+                if ($scope.overpassLayer !== undefined){
+                    map.removeLayer($scope.overpassLayer);
+                }
+                $scope.overpassLayer = undefined;
+            });
+        };
         $scope.overpassToLayer = function(query, filter){
             osmService.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
-                    L.geoJson(geojson, osmGEOJSONOptions).addTo(map);
+                    if ($scope.overpassLayer !== undefined){
+                        map.removeLayer($scope.overpassLayer);
+                    }
+                    $scope.overpassLayer = L.geoJson(geojson, osmGEOJSONOptions);
+                    $scope.overpassLayer.addTo(map);
                 });
             });
         };
@@ -221,6 +235,22 @@ angular.module('osm.controllers').controller('LeafletController',
                     };
                 });
             });
+        };
+        $scope.addNodeToRelation = function(){
+            
+            var features = $scope.relationGeoJSON.features;
+            features.push($scope.currentNode);
+            $scope.members.push({
+                type: $scope.currentNode.geometry.type === 'LineString' ? 'way' : 'node',
+                ref: $scope.currentNode.id,
+                role: ''
+            });
+            leafletService.addGeoJSONLayer(
+                'relation',
+                $scope.relationGeoJSON,
+                $scope.relationGeoJSON.options
+            );
+
         };
         //bind events
         $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
@@ -323,7 +353,7 @@ angular.module('osm.services').factory('osmService',
                     config = {};
                 }
                 config.headers = {Authorization: this.getAuthorization()};
-                $http.put(self.API + method, content, config).then(function(data){
+                $http.put(settingsService.settings.API + method, content, config).then(function(data){
                     var contentType = data.headers()['content-type'];
                     var results;
                     if (contentType.indexOf('application/xml;') === 0){
@@ -427,10 +457,10 @@ angular.module('osm.services').factory('osmService',
                 settingsService.settings.nodes = xmlNodes;
                 return osmtogeojson(xmlNodes, {flatProperties: true});
             },
-            createChangeset: function(sourceURI){
+            createChangeset: function(comment){
                 var deferred = $q.defer();
-                var changeset = '<osm><changeset><tag k="created_by" v="OSMFusion"/><tag k="comment" v="';
-                changeset += 'Import data from ' + sourceURI + '"/></changeset></osm>';
+                var changeset = '<osm><changeset><tag k="created_by" v="OSM-Relation-Editor"/><tag k="comment" v="';
+                changeset += comment + '"/></changeset></osm>';
                 this.put('/0.6/changeset/create', changeset).then(function(data){
                     settingsService.settings.changeset = data;
                     deferred.resolve(data);
@@ -583,10 +613,19 @@ angular.module('osm.services').factory('osmService',
                     type: 'FeatureCollection',
                     tags: [],
                     members:[],
+                    properties: {
+                        id: relationID
+                    },
                     options: {},
                     features: features
                 };
                 var relation = relationXML.getElementById(relationID);
+                result.properties.visible = relation.getAttribute('visible');
+                result.properties.version = relation.getAttribute('version');
+                result.properties.changeset = relation.getAttribute('changeset');
+                result.properties.timestamp = relation.getAttribute('timestamp');
+                result.properties.user = relation.getAttribute('user');
+                result.properties.uid = relation.getAttribute('uid');
                 var m, i;
                 var child, node, properties, coordinates, feature, member, memberElement, tags;
                 for (i = 0; i < relation.children.length; i++) {
@@ -667,6 +706,35 @@ angular.module('osm.services').factory('osmService',
                     }
                 }
                 return result;
+            },
+            relationGeoJSONToXml: function(relationGeoJSON){
+                var i;
+                var pp = relationGeoJSON.properties;
+                var members = relationGeoJSON.members;
+                var settings = settingsService.settings;
+                var output = '<?xml version="1.0" encoding="UTF-8"?>\n';
+                output += '<osm version="0.6" generator="CGImap 0.3.3 (31468 thorn-01.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">\n';
+                output += '  <relation id="'+ pp.id + '" visible="' + pp.visible + '" ';
+                output += 'version="' + pp.version + '" ';
+                output += 'changeset="'+settings.changeset +'" timestamp="' + new Date().toISOString() + '" ';
+                output += 'user="' + settings.username + '" uid="' + pp.uid + '">\n';
+
+                for (i = 0; i < members.length; i++) {
+                    output += '    <member type="'+ members[i].type +'" ';
+                    output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
+                }
+
+                var tags = relationGeoJSON.tags;
+                for (i = 0; i < tags.length; i++) {
+                    output += '    <tag k="'+ tags[i].k +'" v="'+tags[i].v +'"/>\n';
+                }
+                output += '  </relation>\n';
+                output += '</osm>';
+                return output;
+            },
+            sortRelationMembers: function(relationGeoJSON){
+                //sort members
+                var members = relationGeoJSON.members;
             }
         };
         return service;
@@ -699,19 +767,29 @@ angular.module('osm.controllers').controller('RelationController',
         $scope.members = [];
         $scope.tags = [];
         $scope.markers = {};
+        $scope.displayedMember = 0;
+        $scope.currentNode = '';
         $scope.setCurrentRelation = function(member){
             if (member.type === 'relation'){
                 $location.path('/relation/'+member.ref);
             }
         };
-        $scope.addNodeToRelation = function(node){
-            //1. find the way that is attached to this one.
-            //2. create the dom element and attach it to $scope.relationDOM;
-            //3. put -> OSM
-            debugger;
+        var moveMember = function(from, to) {
+            $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
+        };
+        $scope.moveMemberUp = function(member){
+            var index = $scope.members.indexOf(member);
+            moveMember(index, index-1);
+        };
+        $scope.moveMemberDown = function(member){
+            var index = $scope.members.indexOf(member);
+            moveMember(index, index+1);
         };
         $scope.removeMemberFromRelation = function(member){
-
+            var index = $scope.relationGeoJSON.features.indexOf(member);
+            $scope.relationGeoJSON.features.splice(index, 1);
+            $scope.members.splice(index, 1);
+            //FIX: redraw the map ?
         };
         var cache = {};
         var getRelationFeatureById = function(id){
@@ -746,37 +824,64 @@ angular.module('osm.controllers').controller('RelationController',
             popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
         };
         $scope.displayMember = function(member){
-            var c = getRelationFeatureById(member.ref).geometry.coordinates;
-            $scope.markers = {
-                start: {
-                    id: undefined,
-                    icon: startIcon,
-                    lng: c[0][0],
-                    lat: c[0][1],
-                    focus: true,
-                    draggable: false
-                },
-                end: {
-                    id: undefined,
-                    icon: endIcon,
-                    lng: c[c.length-1][0],
-                    lat: c[c.length-1][1],
-                    focus: false,
-                    draggable: false
-                }
-            };
+            $scope.displayedMember = member.ref;
+            $scope.currentMember = getRelationFeatureById(member.ref);
+            var center = [];
+            var c = $scope.currentMember.geometry.coordinates;
+            if ($scope.currentMember.geometry.type === 'LineString'){
+                center = [c[0][1], c[0][0]];
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0][0],
+                        lat: c[0][1],
+                        focus: true,
+                        draggable: false
+                    },
+                    end: {
+                        id: undefined,
+                        icon: endIcon,
+                        lng: c[c.length-1][0],
+                        lat: c[c.length-1][1],
+                        focus: false,
+                        draggable: false
+                    }
+                };                
+            }else if($scope.currentMember.geometry.type === 'Point'){
+                center = [c[1], c[0]];
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0],
+                        lat: c[1],
+                        focus: true,
+                        draggable: false
+                    }
+                };
+            }
             leafletService.getMap().then(function(map){
                 var zoom = map.getZoom();
                 if (zoom < 17){
                     zoom = 17;
                 }
-                map.setView(L.latLng(c[0][1], c[0][0]), zoom);
+                map.setView(L.latLng(center[0], center[1]), zoom);
             });
         };
         var onEachFeature = function(feature, layer) {
             layer.on('click', function (e) {
                 $scope.currentMember = feature;
+                $scope.displayedMember = feature.id;
             });
+        };
+        $scope.saveRelation = function(){
+            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relationGeoJSON);
+            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+                .then(function(data){
+                    debugger;
+                }
+            );
         };
         var initialize = function(){
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
@@ -799,6 +904,7 @@ angular.module('osm.controllers').controller('RelationController',
                     }
                     $scope.relationGeoJSON.options.onEachFeature = onEachFeature;
                     leafletService.addGeoJSONLayer(
+                        'relation',
                         $scope.relationGeoJSON,
                         $scope.relationGeoJSON.options
                     );
@@ -833,10 +939,43 @@ angular.module('osm.services').factory('settingsService',
     }]
 );
 angular.module('osm.controllers').controller('SettingsController',
-	['$scope', 'settingsService',
-	function($scope, settingsService){
+	['$scope', '$routeParams', 'settingsService', 'osmService',
+	function($scope, $routeParams, settingsService, osmService){
 		console.log('init SettingsController');
         $scope.settings = settingsService.settings;
+        $scope.comment = 'Working on relation '+$routeParams.relationid;
+        $scope.createChangeset = function(){
+            osmService.createChangeset($scope.comment).then(
+                function(data){
+                    $scope.settings.changesetID = data;
+                }
+            );
+        };
+        $scope.getLastOpenedChangesetId = function(){
+            osmService.getLastOpenedChangesetId().then(function(data){
+                $scope.settings.changesetID = data;
+            });
+        };
+        $scope.closeChangeset = function(){
+            osmService.closeChangeset().then(
+                function(){
+                    $scope.settings.changesetID = undefined;
+                }
+            );
+
+        };
+        if ($scope.settings.credentials && $scope.settings.username){
+            //validate credentials
+            osmService._credentials = $scope.settings.credentials;
+            osmService._login = $scope.settings.username;
+            osmService.validateCredentials().then(function(loggedin){
+                $scope.loggedin = loggedin;
+                if ($scope.settings.changesetID !== ''){
+                    $scope.getLastOpenedChangesetId();
+                }
+            });
+        }
+
 	}]
 );
 

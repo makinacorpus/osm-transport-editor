@@ -54,11 +54,15 @@
     </div>
     <div class="col-md-3">
         <button ng-show="!settings.changesetID" class="btn btn-default" ng-click="createChangeset()">Create change set</button>
-        <button class="btn btn-default" ng-click="getLastOpenedChangesetId()">get Changeset</button>
-        <button ng-show="settings.changesetID" class="btn btn-primary" ng-click="closeChangeset()">Save (close changeset {{settings.changesetID}})</button>
+        <div ng-show="settings.changesetID">
+            <div class="form-group">
+                <textarea class="form-control" ng-model="comment"></textarea>
+            </div>
+            <button class="btn btn-primary" ng-click="closeChangeset()">Save (close changeset {{settings.changesetID}})</button>
+        </div>
     </div>
     <div class="col-md-3" ng-controller="LoginController">
-        <div class="panel panel-default" ng-show="s">
+        <div class="panel panel-default" ng-show="loggedin">
             <button class="form-control btn btn-danger" ng-click="logout()">Logout</button>
         </div>
 

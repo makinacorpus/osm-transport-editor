@@ -3,27 +3,59 @@
 <div id="maps-wrapper" class="row">
   <div class="col-md-6">
     <div class="panel panel-default">
-      <div class="panel-heading" translate>Relation {{relationName}}</div>
+      <div class="panel-heading" translate>Relation</div>
       <div class="panel-body">
+        <h1>{{relationName}}</h1>
+        <button class="btn btn-primary" ng-click="saveRelation()">Save</button>
         <tabset>
           <tab heading="members {{members.length}}">
+            <div class="form-group">
+              <input class="form-control" type="search" ng-model="q"/>
+            </div>
             <table class="table table-bordered">
-              <tr>
-                <th>ref</th>
+              <tr width="60%">
                 <th>actions</th>
+                <th>type/ref name</th>
               </tr>
-              <tr ng-repeat="member in members">
+              <tr width="30%" ng-repeat="member in members | filter:q">
                 <td>
-                  <div ng-if="member.type === 'relation'">
-                    <a class="btn btn-default"
-                     ng-click="setCurrentRelation(member)">[{{member.type}}] {{member.name}} ({{member.ref}})</a>
+                  <div style="font-size: 80%" ng-show="member.type === 'relation'">
+                    <a target="_blank" ng-href="https://openstreetmap.org/relation/{{member.ref}}" translate>OSM</a>
+                    <a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{member.ref}}" translate>iD</a>
+                    <a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{member.ref}}" translate>Potlatch2</a>
+                    <a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{member.ref}}/full" translate>JOSM</a>
+                    <a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{member.ref}}" translate>History</a>
+                    <a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{member.ref}}" translate>Analyse</a>
+                    <a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{member.ref}}" translate>Analyse fr</a>
+                    <a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{member.ref}}" translate>Manage</a>
+                    <a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{member.ref}}" translate>GPX</a>
                   </div>
-                  <div ng-if="member.type !== 'relation'">
-                    <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}} {{member.name}}</a>
+
+                  <button  ng-show="member.type !== 'relation'" ng-class="{btn: 1, 'btn-xs': 1, 'btn-default': member.ref !== displayedMember, 'btn-primary': member.ref === displayedMember}" ng-click="displayMember(member)">
+                    <i class="fa fa-map-marker"></i>
+                  </button>
+
+                  <div class="btn-group">
+                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+                      <i class="fa fa-arrow-circle-o-up"></i>
+                    </button>
+                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+                      <i class="fa fa-arrow-circle-o-down"></i>
+                    </button>
+                    <button class="btn btn-danger" ng-click="removeMemberFromRelation(member)">
+                      <i class="fa fa-trash-o"></i>
+                    </button>
                   </div>
                 </td>
                 <td>
-                  <button class="btn btn-default" ng-click="displayMember(member)">Display on map</button>
+                  <div ng-if="member.type === 'relation'">
+                    relation/
+                    <a class="btn btn-default" ng-click="setCurrentRelation(member)">{{member.ref}}</a> {{member.name}}
+                  </div>
+                  <div ng-if="member.type !== 'relation'">
+                    {{member.type}}/
+                    <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}}</a> {{member.name}}
+                  </div>
                 </td>
               </tr>
             </table>
@@ -49,11 +81,13 @@
   </div>
   <div class="col-md-6" ng-controller="LeafletController">
     <leaflet center="center" markers="markers" layers="layers" width="100%" height="600" geojson="leafletGeojson"></leaflet>
+
     <table class="table table-bordered">
       <tr>
         <th>Categories</th>
         <th>Actions</th>
       </tr>
+<!--
       <tr ng-show="zoomLevel > 15">
         <td>Loading data (OSM API)</td>
         <td>
@@ -62,25 +96,21 @@
           <a class="btn btn-default" ng-click="loadOSMBusStop()" translate>Load bus stop</a>
         </td>
       </tr>
-      <tr>
-        <td>Loading data (Overpass API)</td>
+    -->
+      <tr ng-show="currentNode">
+        <td>Selected item</td>
         <td>
-          <a class="btn btn-default" ng-click="loadOverpassWays()" translate>Load ways</a>
-          <a class="btn btn-default" ng-click="loadOverpassBusStop()" translate>Load bus stop</a>
+          <button ng-show="currentNode" class="btn btn-primary btn-lg" ng-click="addNodeToRelation(currentNode)">Add {{currentNode.id}} to relation</button>
         </td>
       </tr>
       <tr>
-        <td>Modify relation</td>
+        <td>Overpass API</td>
         <td>
-          <button ng-show="currentNode" class="btn btn-primary" ng-click="addNodeToRelation(currentNode)">Add {{currentNode.id}} to relation</button>
-          <button ng-show="currentMember" class="btn btn-danger" ng-click="removeMemberFromRelation(currentMember)">Remove {{currentMember.id}} from relation</button>
-        </td>
-      </tr>
-      <tr>
-        <td>Open in another editor</td>
-        <td>
-          <a class="btn btn-default" target="_blank" ng-href="https://openstreetmap.org/relation/{{relationID}}" translate>Open in OSM</a>
-          <a class="btn btn-default" target="_blank" ng-href="https://openstreetmap.org/edit?relation={{relationID}}" translate>Open in iD</a>
+          <div class="btn-group">
+            <a class="btn btn-default" ng-click="loadOverpassWays()" translate>display ways</a>
+            <a class="btn btn-default" ng-click="loadOverpassBusStop()" translate>display bus stop</a>
+            <a class="btn btn-danger" ng-show="overpassLayer" ng-click="removeOverpassLayer()">hide items</a>
+          </div>
         </td>
       </tr>
     </table>
@@ -96,6 +126,9 @@
           </tab>
           <tab heading="relation full (xml)">
             <pre>{{relationXMLFull}}</pre>
+          </tab>
+          <tab heading="relation output (xml)">
+            <pre>{{relationXMLOutput}}</pre>
           </tab>
           <tab heading="currentNode">
             <p>For debug purpose</p>
