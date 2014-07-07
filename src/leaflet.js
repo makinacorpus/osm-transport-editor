@@ -211,8 +211,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 });
             });
         };
-        $scope.addNodeToRelation = function(){
-            
+        $scope.addNodeToRelation = function(node, newIndex){
             var features = $scope.relationGeoJSON.features;
             features.push($scope.currentNode);
             $scope.members.push({
@@ -220,12 +219,14 @@ angular.module('osm.controllers').controller('LeafletController',
                 ref: $scope.currentNode.id,
                 role: ''
             });
+            if (!isNaN(newIndex)){
+                $scope.moveMemberFromIndexToIndex($scope.members.length-1, newIndex);
+            }
             leafletService.addGeoJSONLayer(
                 'relation',
                 $scope.relationGeoJSON,
                 $scope.relationGeoJSON.options
             );
-
         };
         //bind events
         $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
