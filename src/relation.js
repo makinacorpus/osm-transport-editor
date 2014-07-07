@@ -140,6 +140,10 @@ angular.module('osm.controllers').controller('RelationController',
                 }
             );
         };
+        $scope.sortRelationMembers = function(){
+            osmService.sortRelationMembers($scope.relationGeoJSON);
+            $scope.members = $scope.relationGeoJSON.members;
+        };
         var initialize = function(){
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
                 $scope.relationDOM = data;
