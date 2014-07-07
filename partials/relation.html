@@ -6,11 +6,13 @@
       <div class="panel-heading" translate>Relation</div>
       <div class="panel-body">
         <h1>{{relationName}}</h1>
-        <div class="form-group pull-right">
+        <div class="form-group">
+          <button class="btn btn-default" ng-click="hideRelationlayer()">Hide layer</button>
+          <button class="btn btn-default" ng-click="displayRelationlayer()">Display layer</button>
           <button class="btn btn-primary" ng-click="saveRelation()">Save
             <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
-            <i class="fa fa-check fa-fw text-success ng-hide" ng-show="loading.savingsuccess"></i>
-            <i class="fa fa-times fa-fw text-danger ng-hide" ng-show="loading.savingerror"></i>
+            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
+            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
           </button>
         </div>
         <div class="form-group">
@@ -235,7 +237,28 @@
         </td>
       </tr>
     </table>
-
+    <div class="form-inline">
+        <div class="form-group">
+            <input type="uri" ng-model="newGeoJSONURI" class="form-control" placeholder="geojson URI"/>
+        </div>
+        <button class="btn btn-default" ng-click="addGeoJSON(newGeoJSONURI)">Add</button>
+    </div>
+    <table class="table table-bordered">
+      <tr>
+        <th>uri</th>
+        <th>action</th>
+      </tr>
+      <tr ng-repeat="geojson in settings.geojsonLayers">
+        <td>{{geojson}}</td>
+        <td>
+          <button class="btn btn-danger" ng-click="removeGeoJSON(geojson)">delete
+              <i class="fa fa-trash-o"></i>
+          </button>
+          <button class="btn btn-default" ng-click="hideGeoJSON(geojson)">hide</button>
+          <button class="btn btn-default" ng-click="displayGeoJSON(geojson)">display</button>
+        </td>
+      </tr>
+    </table>
 
     <br/>
     <div class="panel panel-default">
