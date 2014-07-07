@@ -604,6 +604,28 @@ angular.module('osm.services').factory('osmService',
                 }else{
                     console.error('can t sort this relation');
                 }
+            },
+            yqlJSON: function(featuresURL){
+                var deferred = $q.defer();
+                var url, config;
+                config = {
+                    params: {
+                        q: "select * from json where url='" + featuresURL + "';",
+                        format: 'json'
+                    }
+                };
+                url = 'http://query.yahooapis.com/v1/public/yql';
+                $http.get(url, config).then(
+                    function(data){
+                        if (data.data.query.results === null){
+                            deferred.resolve([]);
+                        }else{
+                            deferred.resolve(data.data.query.results.json);
+                        }
+                    }, function(error){
+                        deferred.rejec(error);
+                    });
+                return deferred.promise;
             }
         };
         return service;

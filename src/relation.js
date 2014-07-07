@@ -20,7 +20,6 @@ angular.module('osm.controllers').controller('RelationController',
     function($scope, $routeParams, $location, settingsService, osmService, leafletService){
         console.log('init RelationController');
         $scope.relationID = $routeParams.relationid;
-        $scope.relationDOM; //XML DOM data receive from OSM;
         $scope.members = [];
         $scope.tags = [];
         $scope.markers = {};
@@ -64,7 +63,7 @@ angular.module('osm.controllers').controller('RelationController',
                 }
             }
             if (typeof id === 'string'){
-                return cache[parseInt(id)];
+                return cache[parseInt(id, 10)];
             }
             return cache[id];
         };
@@ -110,7 +109,7 @@ angular.module('osm.controllers').controller('RelationController',
                         focus: false,
                         draggable: false
                     }
-                };                
+                };
             }else if($scope.currentMember.geometry.type === 'Point'){
                 center = [c[1], c[0]];
                 $scope.markers = {
@@ -133,7 +132,7 @@ angular.module('osm.controllers').controller('RelationController',
             });
         };
         var onEachFeature = function(feature, layer) {
-            layer.on('click', function (e) {
+            layer.on('click', function () {
                 $scope.currentMember = feature;
                 $scope.displayedMember = feature.id;
             });
@@ -152,7 +151,7 @@ angular.module('osm.controllers').controller('RelationController',
                     $scope.loading.saving = false;
                     $scope.loading.savingsuccess = true;
                     $scope.loading.savingerror = false;
-                }, function(error){
+                }, function(){
                     $scope.loading.saving = false;
                     $scope.loading.savingsuccess = false;
                     $scope.loading.savingerror = true;
@@ -198,6 +197,12 @@ angular.module('osm.controllers').controller('RelationController',
             }
             var member = $scope.members.splice(oldIndex, 1)[0];
             $scope.members.splice(newIndex, 0, member);
+        };
+        $scope.hideRelationLayer = function(){
+            leafletService.hideLayer('relation');
+        };
+        $scope.displayRelationLayer = function(){
+            leafletService.displaylayer('relation');
         };
         var initialize = function(){
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
@@ -321,8 +326,6 @@ angular.module('osm.controllers').controller('ParentsRelationsController',
                         name: osmService.getNameFromTags(relations[i])
                     });
                 }
-            }, function(error){
-                
-            });
+            }, function(){});
     }]
 );

@@ -15,6 +15,7 @@ angular.module('osm.services').factory('settingsService',
                 changesetID: '',
                 osmtags: {},
                 osmfilter: [],
+                geojsonLayers:[],
                 preferAdding: false
             })
         };
