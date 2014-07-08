@@ -280,13 +280,24 @@ angular.module('osm.controllers').controller('LeafletController',
         });
         $scope.externalLayers = {};
         var reloadExternalLayers = function(){
+            var onEachFeature = function(feature, layer) {
+                if (feature.properties) {
+                    var html = '<ul>';
+                    for (var propertyName in feature.properties) {
+                        html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                    }
+                    html += '</ul>';
+                    layer.bindPopup(html);
+                }
+            };
+            console.log('load external geojson layers');
             var uris = $scope.settings.geojsonLayers;
             var uri;
             var overlays = {};
             for (var i = 0; i < uris.length; i++) {
                 uri = uris[i];
                 osmService.yqlJSON(uri).then(function(geojson){
-                    leafletService.addGeoJSONLayer(uri, geojson);
+                    leafletService.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                 });
             }
         };

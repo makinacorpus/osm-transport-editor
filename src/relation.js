@@ -19,6 +19,7 @@ angular.module('osm.controllers').controller('RelationController',
     ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
     function($scope, $routeParams, $location, settingsService, osmService, leafletService){
         console.log('init RelationController');
+        $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.relationid;
         $scope.members = [];
         $scope.tags = [];
@@ -136,6 +137,14 @@ angular.module('osm.controllers').controller('RelationController',
                 $scope.currentMember = feature;
                 $scope.displayedMember = feature.id;
             });
+            if (feature.properties){
+                var html = '<ul>';
+                for (var propertyName in feature.properties) {
+                    html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                }
+                html += '</ul>';
+                layer.bindPopup(html);
+            }
         };
         $scope.loading.saving = false;
         $scope.loading.savingsuccess = false;
@@ -205,6 +214,8 @@ angular.module('osm.controllers').controller('RelationController',
             leafletService.displaylayer('relation');
         };
         var initialize = function(){
+            $scope.loggedin = $scope.settings.credentials;
+
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
                 $scope.relationDOM = data;
                 $scope.relationXML = osmService.serialiseXmlToString(data);

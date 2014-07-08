@@ -37,12 +37,15 @@ angular.module('osm.services').factory('osmService',
                         settingsService.settings.userid = users[0].id;
                     }
                     deferred.resolve(users.length > 0);
+                }, function(error){
+                    deferred.reject(error);
                 });
                 return deferred.promise;
             },
             setCredentials: function(username, password){
                 settingsService.settings.username = username;
                 settingsService.settings.credentials = $base64.encode(username + ':' + password);
+                console.log(settingsService.settings.credentials);
                 return settingsService.settings.credentials;
             },
             getCredentials: function(){
