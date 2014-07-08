@@ -1,54 +1,73 @@
-<div ng-include="'./partials/settings.html'"></div>
-
 <div id="maps-wrapper" class="row">
   <div class="col-md-6">
     <div class="panel panel-default">
-      <div class="panel-heading" translate>Relation</div>
       <div class="panel-body">
         <h1>{{relationName}}</h1>
-        <div class="form-group">
-          <button class="btn btn-default" ng-click="hideRelationlayer()">Hide layer</button>
-          <button class="btn btn-default" ng-click="displayRelationlayer()">Display layer</button>
-          <button class="btn btn-primary" ng-click="saveRelation()">Save
+        <div class="form-group pull-right">
+          <div class="btn-group" dropdown>
+            <button type="button" class="btn btn-default dropdown-toggle">
+              <i class="fa fa-globe"></i> Open relation with <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+              <li><a target="_blank" ng-href="https://openstreetmap.org/relation/{{relationID}}" translate>OSM</a></li>
+              <li><a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{relationID}}" translate>iD</a></li>
+              <li><a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{relationID}}" translate>Potlatch2</a></li>
+              <li><a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{relationID}}/full" translate>JOSM</a></li>
+              <li><a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{relationID}}" translate>History</a></li>
+              <li><a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{relationID}}" translate>Analyse</a></li>
+              <li><a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{relationID}}" translate>Analyse fr</a></li>
+              <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{relationID}}" translate>Manage</a></li>
+              <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{relationID}}" translate>GPX</a></li>
+            </ul>
+          </div>
+          <button class="btn btn-primary" ng-disabled="!loggedin" ng-click="saveRelation()">Save
             <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
             <i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
             <i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
           </button>
         </div>
-        <div class="form-group">
-          <a target="_blank" ng-href="https://openstreetmap.org/relation/{{relationID}}" translate>OSM</a>
-          <a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{relationID}}" translate>iD</a>
-          <a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{relationID}}" translate>Potlatch2</a>
-          <a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{relationID}}/full" translate>JOSM</a>
-          <a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{relationID}}" translate>History</a>
-          <a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{relationID}}" translate>Analyse</a>
-          <a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{relationID}}" translate>Analyse fr</a>
-          <a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{relationID}}" translate>Manage</a>
-          <a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{relationID}}" translate>GPX</a>
-        </div>
 
         <tabset>
           <tab heading="members {{members.length}}">
-            <div class="form-group">
-              <input class="form-control" type="search" ng-model="q"/>
+            <div class="form-group pull-right">
+              <input class="form-control" placeholder="Search for members" type="search" ng-model="q"/>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-default" ng-disabled="!hasPreviousMembers()" ng-click="displayPreviousMembers()">
+                  <i class="fa fa-angle-left"></i>
+              </button>
+              <button class="btn btn-default" ng-disabled="!hasNextMembers()" ng-click="displayNextMembers()">
+                  <i class="fa fa-angle-right"></i>
+              </button>
+              <button class="btn btn-default" ng-click="toggleBatchMembers()">
+                  Display All / batch
+              </button>
             </div>
             <table class="table table-bordered">
-              <tr width="60%">
-                <th>actions</th>
-                <th>type/ref name</th>
+              <tr>
+                <th width="30%">actions</th>
+                <th width="70%">type/ref name</th>
               </tr>
-              <tr width="30%" ng-repeat="member in members | filter:q | slice:start:end">
+              <tr ng-repeat="member in members | filter:q | slice:start:end">
                 <td>
-                  <div style="font-size: 80%" ng-show="member.type === 'relation'">
-                    <a target="_blank" ng-href="https://openstreetmap.org/relation/{{member.ref}}" translate>OSM</a>
-                    <a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{member.ref}}" translate>iD</a>
-                    <a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{member.ref}}" translate>Potlatch2</a>
-                    <a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{member.ref}}/full" translate>JOSM</a>
-                    <a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{member.ref}}" translate>History</a>
-                    <a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{member.ref}}" translate>Analyse</a>
-                    <a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{member.ref}}" translate>Analyse fr</a>
-                    <a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{member.ref}}" translate>Manage</a>
-                    <a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{member.ref}}" translate>GPX</a>
+                  <div ng-show="member.type === 'relation'">
+                    <div class="btn-group pull-left" dropdown>
+                      <button type="button" class="btn btn-default dropdown-toggle pull-left">
+                        <i class="fa fa-globe"></i><span class="caret"></span>
+                      </button>
+                      <ul class="dropdown-menu" role="menu">
+                        
+                        <li><a target="_blank" ng-href="https://openstreetmap.org/relation/{{member.ref}}" translate>OSM</a></li>
+                        <li><a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{member.ref}}" translate>iD</a></li>
+                        <li><a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{member.ref}}" translate>Potlatch2</a></li>
+                        <li><a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{member.ref}}/full" translate>JOSM</a></li>
+                        <li><a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{member.ref}}" translate>History</a></li>
+                        <li><a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{member.ref}}" translate>Analyse</a></li>
+                        <li><a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{member.ref}}" translate>Analyse fr</a></li>
+                        <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{member.ref}}" translate>Manage</a></li>
+                        <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{member.ref}}" translate>GPX</a></li>
+                      </ul>
+                    </div>
                   </div>
 
                   <button  ng-show="member.type !== 'relation'" ng-class="{btn: 1, 'btn-xs': 1, 'btn-default': member.ref !== displayedMember, 'btn-primary': member.ref === displayedMember}" ng-click="displayMember(member)">
@@ -70,7 +89,8 @@
                 <td>
                   <div ng-if="member.type === 'relation'">
                     [{{members.indexOf(member)}}] relation/
-                    <a class="btn btn-default" ng-click="setCurrentRelation(member)">{{member.ref}}</a> {{member.name}}
+                    <button class="btn btn-default" ng-click="setCurrentRelation(member)">
+                      <i class="fa fa-pencil"></i> {{member.ref}}</button> {{member.name}}
                   </div>
                   <div ng-if="member.type !== 'relation'">
                     [{{members.indexOf(member)}}] {{member.type}}/
@@ -150,7 +170,7 @@
       </div>
     </div>
     <div class="panel panel-default" ng-controller="RelationSearchController">
-      <div class="panel-heading">Search for relations</div>
+      <div class="panel-heading">Search for relations (overpass)</div>
       <div class="panel-body">
         <div class="input-group margin-bottom-sm" ui-keypress="{13:'search()'}">
           <input type="search" class="form-control" ng-model="pattern" placeholder="relation pattern"/>
@@ -202,6 +222,10 @@
 
   </div>
   <div class="col-md-6" ng-controller="LeafletController">
+
+    <div ng-include="'./partials/settings.html'"></div>
+
+
     <leaflet center="center" markers="markers" layers="layers" width="100%" height="600" geojson="leafletGeojson"></leaflet>
 
     <table class="table table-bordered">

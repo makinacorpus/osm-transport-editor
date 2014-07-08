@@ -25,6 +25,42 @@ angular.module('osm.directives', []);
 
 /*jshint strict:false */
 /*global angular:false */
+
+angular.module('osm.controllers').controller('ChangesetController',
+	['$scope', '$routeParams', 'settingsService', 'osmService',
+	function($scope, $routeParams, settingsService, osmService){
+		console.log('init ChangesetController');
+        $scope.settings = settingsService.settings;
+        $scope.comment = 'Working on relation '+$routeParams.relationid;
+        $scope.createChangeset = function(){
+            osmService.createChangeset($scope.comment).then(
+                function(data){
+                    $scope.settings.changesetID = data;
+                }
+            );
+        };
+        $scope.getLastOpenedChangesetId = function(){
+            osmService.getLastOpenedChangesetId().then(function(data){
+                $scope.settings.changesetID = data;
+            });
+        };
+        $scope.closeChangeset = function(){
+            osmService.closeChangeset().then(
+                function(){
+                    $scope.settings.changesetID = undefined;
+                }
+            );
+        };
+        var initialize = function(){
+            if ($scope.settings.changesetID !== '' && $scope.settings.credentials){
+                $scope.getLastOpenedChangesetId();
+            }
+        };
+        initialize();
+	}]
+);
+/*jshint strict:false */
+/*global angular:false */
 /*global L:false */
 L.Icon.Default.imagePath = 'images/';
 
@@ -305,19 +341,70 @@ angular.module('osm.controllers').controller('LeafletController',
         });
         $scope.externalLayers = {};
         var reloadExternalLayers = function(){
+            var onEachFeature = function(feature, layer) {
+                if (feature.properties) {
+                    var html = '<ul>';
+                    for (var propertyName in feature.properties) {
+                        html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                    }
+                    html += '</ul>';
+                    layer.bindPopup(html);
+                }
+            };
+            console.log('load external geojson layers');
             var uris = $scope.settings.geojsonLayers;
             var uri;
             var overlays = {};
             for (var i = 0; i < uris.length; i++) {
                 uri = uris[i];
                 osmService.yqlJSON(uri).then(function(geojson){
-                    leafletService.addGeoJSONLayer(uri, geojson);
+                    leafletService.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                 });
             }
         };
         reloadExternalLayers();
     }]
 );
+/*jshint strict:false */
+/*global angular:false */
+
+angular.module('osm.controllers').controller('LoginController',
+	['$scope', 'settingsService','osmService', //'flash',
+	function($scope, settingsService, osmService){//, flash){
+		console.log('init logcontroller');
+        $scope.loggedin = osmService.getCredentials();
+        $scope.mypassword = '';
+        $scope.settings = settingsService.settings;
+        $scope.login = function(){
+            osmService.setCredentials(
+                $scope.settings.username,
+                $scope.mypassword
+            );
+            osmService.validateCredentials().then(function(loggedin){
+                $scope.loggedin = loggedin;
+                if (!loggedin){
+                    //flash('error', 'login failed');
+                }else{
+                    //persist credentials
+                    $scope.settings.credentials = osmService.getCredentials();
+                    //flash('login success');
+                }
+            });
+        };
+        $scope.logout = function(){
+            osmService.clearCredentials();
+            $scope.loggedin = false;
+        };
+        if ($scope.settings.credentials && $scope.settings.username){
+            //validate credentials
+            osmService.validateCredentials().then(function(loggedin){
+                $scope.loggedin = loggedin;
+            });
+        }
+
+	}]
+);
+
 /*jshint strict:false */
 /*global angular:false */
 
@@ -357,12 +444,15 @@ angular.module('osm.services').factory('osmService',
                         settingsService.settings.userid = users[0].id;
                     }
                     deferred.resolve(users.length > 0);
+                }, function(error){
+                    deferred.reject(error);
                 });
                 return deferred.promise;
             },
             setCredentials: function(username, password){
                 settingsService.settings.username = username;
                 settingsService.settings.credentials = $base64.encode(username + ':' + password);
+                console.log(settingsService.settings.credentials);
                 return settingsService.settings.credentials;
             },
             getCredentials: function(){
@@ -973,6 +1063,7 @@ angular.module('osm.controllers').controller('RelationController',
     ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
     function($scope, $routeParams, $location, settingsService, osmService, leafletService){
         console.log('init RelationController');
+        $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.relationid;
         $scope.members = [];
         $scope.tags = [];
@@ -1090,6 +1181,14 @@ angular.module('osm.controllers').controller('RelationController',
                 $scope.currentMember = feature;
                 $scope.displayedMember = feature.id;
             });
+            if (feature.properties){
+                var html = '<ul>';
+                for (var propertyName in feature.properties) {
+                    html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                }
+                html += '</ul>';
+                layer.bindPopup(html);
+            }
         };
         $scope.loading.saving = false;
         $scope.loading.savingsuccess = false;
@@ -1159,6 +1258,8 @@ angular.module('osm.controllers').controller('RelationController',
             leafletService.displaylayer('relation');
         };
         var initialize = function(){
+            $scope.loggedin = $scope.settings.credentials;
+
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
                 $scope.relationDOM = data;
                 $scope.relationXML = osmService.serialiseXmlToString(data);
@@ -1305,71 +1406,4 @@ angular.module('osm.services').factory('settingsService',
             })
         };
     }]
-);
-angular.module('osm.controllers').controller('SettingsController',
-	['$scope', '$routeParams', 'settingsService', 'osmService',
-	function($scope, $routeParams, settingsService, osmService){
-		console.log('init SettingsController');
-        $scope.settings = settingsService.settings;
-        $scope.comment = 'Working on relation '+$routeParams.relationid;
-        $scope.createChangeset = function(){
-            osmService.createChangeset($scope.comment).then(
-                function(data){
-                    $scope.settings.changesetID = data;
-                }
-            );
-        };
-        $scope.getLastOpenedChangesetId = function(){
-            osmService.getLastOpenedChangesetId().then(function(data){
-                $scope.settings.changesetID = data;
-            });
-        };
-        $scope.closeChangeset = function(){
-            osmService.closeChangeset().then(
-                function(){
-                    $scope.settings.changesetID = undefined;
-                }
-            );
-
-        };
-        if ($scope.settings.credentials && $scope.settings.username){
-            //validate credentials
-            osmService._credentials = $scope.settings.credentials;
-            osmService._login = $scope.settings.username;
-            osmService.validateCredentials().then(function(loggedin){
-                $scope.loggedin = loggedin;
-                if ($scope.settings.changesetID !== ''){
-                    $scope.getLastOpenedChangesetId();
-                }
-            });
-        }
-
-	}]
-);
-
-angular.module('osm.controllers').controller('LoginController',
-	['$scope', 'osmService', //'flash',
-	function($scope, osmService){//, flash){
-		console.log('init logcontroller');
-        $scope.loggedin = osmService.getCredentials();
-        $scope.mypassword = '';
-        $scope.login = function(){
-            osmService.setCredentials($scope.settings.username, $scope.mypassword);
-            osmService.validateCredentials().then(function(loggedin){
-                $scope.loggedin = loggedin;
-                if (!loggedin){
-                    //flash('error', 'login failed');
-                }else{
-                    //persist credentials
-                    $scope.settings.credentials = osmService.getCredentials();
-                    //flash('login success');
-                }
-            });
-        };
-        $scope.logout = function(){
-            osmService.clearCredentials();
-            $scope.loggedin = false;
-        };
-
-	}]
 );
