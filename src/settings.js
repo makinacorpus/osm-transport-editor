@@ -1,6 +1,6 @@
 /*jshint strict:false */
 /*global angular:false */
-/*global L:false */
+
 angular.module('osm.services').factory('settingsService',
     ['$localStorage', function($localStorage){
         return {
@@ -11,12 +11,12 @@ angular.module('osm.services').factory('settingsService',
                 credentials: '',
                 nodes: [],
                 changeset: '',
-                API: 'http://api.openstreetmap.org/api',
+                API: 'http://api.openstreetmap.fr/api',
                 changesetID: '',
                 osmtags: {},
                 osmfilter: [],
                 geojsonLayers:[],
-                preferAdding: false
+                history:[]
             })
         };
     }]

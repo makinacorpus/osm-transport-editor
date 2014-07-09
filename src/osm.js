@@ -629,6 +629,16 @@ angular.module('osm.services').factory('osmService',
                         deferred.rejec(error);
                     });
                 return deferred.promise;
+            },
+            getElementTypeFromFeature: function(feature){
+                var gtype = feature.geometry.type;
+                if (gtype === 'LineString'){
+                    return 'way';
+                }else if (gtype === 'Point'){
+                    return 'node';
+                }else{
+                    console.error('not supported type '+gtype);
+                }
             }
         };
         return service;

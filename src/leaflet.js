@@ -64,6 +64,7 @@ angular.module('osm.controllers').controller('LeafletController',
     function($scope, $q, leafletService, osmService, settingsService){
         $scope.settings = settingsService.settings;
         $scope.center = leafletService.center;
+        $scope.zoomLevel = leafletService.center.zoom;
         $scope.layers = leafletService.layers;
         $scope.geojson = leafletService.geojson;
         var style = function(feature) {
@@ -110,6 +111,22 @@ angular.module('osm.controllers').controller('LeafletController',
         var onEachFeature = function(feature, layer) {
             layer.on('click', function (e) {
                 $scope.currentNode = feature;
+                //load relation that node is member of
+                if (feature.id !== undefined){
+                    var url = '/0.6/'+ osmService.getElementTypeFromFeature(feature);
+                    url += '/' + feature.id + '/relations';
+                    $scope.currentNodeParents = [];
+                    osmService.get(url).then(function(data){
+                        var relations = data.getElementsByTagName('relation');
+                        for (var i = 0; i < relations.length; i++) {
+                            $scope.currentNodeParents.push({
+                                type: 'relation',
+                                ref: relations[i].getAttribute('id'),
+                                name: osmService.getNameFromTags(relations[i])
+                            });
+                        }
+                    }, function(){});
+                }
             });
         };
         var osmGEOJSONOptions = {
@@ -268,9 +285,6 @@ angular.module('osm.controllers').controller('LeafletController',
         };
 
         //bind events
-        $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
-            $scope.currentNode = featureSelected;
-        });
         leafletService.getMap().then(function(map){
             $scope.map = map;
             reloadExternalLayers();
