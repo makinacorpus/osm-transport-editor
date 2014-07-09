@@ -27,9 +27,14 @@ angular.module('osm').directive('relationsTable', function(){
 });
 
 angular.module('osm.controllers').controller('RelationsTableController',
-    ['$scope', '$routeParams', 'osmService',
-    function($scope, $routeParams, osmService){
+    ['$scope', '$routeParams', '$location', 'osmService',
+    function($scope, $routeParams, $location, osmService){
         console.log('init RelationsTableController');
+        $scope.setCurrentRelation = function(member){
+            if (member.type === 'relation'){
+                $location.path('/relation/'+member.ref);
+            }
+        };
     }]
 );
 
@@ -229,12 +234,6 @@ angular.module('osm.controllers').controller('RelationController',
             var member = $scope.members.splice(oldIndex, 1)[0];
             $scope.members.splice(newIndex, 0, member);
         };
-        $scope.hideRelationLayer = function(){
-            leafletService.hideLayer('relation');
-        };
-        $scope.displayRelationLayer = function(){
-            leafletService.displaylayer('relation');
-        };
         $scope.addRelationToHistory = function(){
             var found = false;
             for (var i = 0; i < $scope.settings.history.length; i++) {
@@ -248,6 +247,51 @@ angular.module('osm.controllers').controller('RelationController',
                     name:$scope.relationName
                 });
             }
+        };
+        var isFitWith = function(c1, c2){
+            var cc,i,j;
+            for (i = 0; i < c1.length; i++) {
+                cc = c1[i];
+                for (j = 0; j < c2.length; j++) {
+                    if (cc[0] === c2[j][0] && cc[1] === c2[j][1]){
+                        return true;
+                    }
+                }
+            }
+        };
+        $scope.fitWithSibling = function(member){
+            var index = $scope.members.indexOf(member);
+            var current = $scope.relationGeoJSON.features[index];
+            if (current.geometry.type === 'Point'){
+                return true; //not supported
+            }
+            var previous,next;
+            var fitWithPrevious, fitWithNext;
+            if (index > 0){
+                previous = $scope.relationGeoJSON.features[index - 1];
+                if (previous.geometry.type !== 'LineString'){
+                    return false;
+                }
+                fitWithPrevious = isFitWith(
+                    current.geometry.coordinates,
+                    previous.geometry.coordinates
+                );
+            }else{
+                fitWithPrevious = true;
+            }
+            if (index < $scope.members.length - 1){
+                next = $scope.relationGeoJSON.features[index + 1];
+                if (next.geometry.type !== 'LineString'){
+                    return false;
+                }
+                fitWithNext = isFitWith(
+                    current.geometry.coordinates,
+                    next.geometry.coordinates
+                );
+            }else{
+                fitWithNext = true;
+            }
+            return fitWithNext && fitWithPrevious;
         };
         $scope.initialize = function(){
             $scope.loggedin = $scope.settings.credentials;
