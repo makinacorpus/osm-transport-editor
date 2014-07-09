@@ -125,6 +125,7 @@ angular.module('osm.controllers').controller('LeafletController',
     function($scope, $q, leafletService, osmService, settingsService){
         $scope.settings = settingsService.settings;
         $scope.center = leafletService.center;
+        $scope.zoomLevel = leafletService.center.zoom;
         $scope.layers = leafletService.layers;
         $scope.geojson = leafletService.geojson;
         var style = function(feature) {
@@ -171,6 +172,22 @@ angular.module('osm.controllers').controller('LeafletController',
         var onEachFeature = function(feature, layer) {
             layer.on('click', function (e) {
                 $scope.currentNode = feature;
+                //load relation that node is member of
+                if (feature.id !== undefined){
+                    var url = '/0.6/'+ osmService.getElementTypeFromFeature(feature);
+                    url += '/' + feature.id + '/relations';
+                    $scope.currentNodeParents = [];
+                    osmService.get(url).then(function(data){
+                        var relations = data.getElementsByTagName('relation');
+                        for (var i = 0; i < relations.length; i++) {
+                            $scope.currentNodeParents.push({
+                                type: 'relation',
+                                ref: relations[i].getAttribute('id'),
+                                name: osmService.getNameFromTags(relations[i])
+                            });
+                        }
+                    }, function(){});
+                }
             });
         };
         var osmGEOJSONOptions = {
@@ -329,9 +346,6 @@ angular.module('osm.controllers').controller('LeafletController',
         };
 
         //bind events
-        $scope.$on("leafletDirectiveMap.geojsonClick", function(ev, featureSelected) {
-            $scope.currentNode = featureSelected;
-        });
         leafletService.getMap().then(function(map){
             $scope.map = map;
             reloadExternalLayers();
@@ -1036,6 +1050,16 @@ angular.module('osm.services').factory('osmService',
                         deferred.rejec(error);
                     });
                 return deferred.promise;
+            },
+            getElementTypeFromFeature: function(feature){
+                var gtype = feature.geometry.type;
+                if (gtype === 'LineString'){
+                    return 'way';
+                }else if (gtype === 'Point'){
+                    return 'node';
+                }else{
+                    console.error('not supported type '+gtype);
+                }
             }
         };
         return service;
@@ -1057,6 +1081,25 @@ angular.module('osm').config(['$routeProvider', function($routeProvider) {
     });
     $routeProvider.otherwise({redirectTo: '/relation'});
 }]);
+
+angular.module('osm').directive('relationsTable', function(){
+    return {
+        restrict: 'AE',
+        replace: true,
+        templateUrl: 'partials/relationsTable.html',
+        controller: 'RelationsTableController',
+        scope: {
+            relations: '=relations'
+        }
+    };
+});
+
+angular.module('osm.controllers').controller('RelationsTableController',
+    ['$scope', '$routeParams', 'osmService',
+    function($scope, $routeParams, osmService){
+        console.log('init RelationsTableController');
+    }]
+);
 
 
 angular.module('osm.controllers').controller('RelationController',
@@ -1133,10 +1176,8 @@ angular.module('osm.controllers').controller('RelationController',
         $scope.displayMember = function(member){
             $scope.displayedMember = member.ref;
             $scope.currentMember = getRelationFeatureById(member.ref);
-            var center = [];
             var c = $scope.currentMember.geometry.coordinates;
             if ($scope.currentMember.geometry.type === 'LineString'){
-                center = [c[0][1], c[0][0]];
                 $scope.markers = {
                     start: {
                         id: undefined,
@@ -1155,8 +1196,13 @@ angular.module('osm.controllers').controller('RelationController',
                         draggable: false
                     }
                 };
+                leafletService.getMap().then(function(map){
+                    map.fitBounds(L.latLngBounds(
+                        L.latLng(c[0][1], c[0][0]),
+                        L.latLng(c[c.length-1][1], c[c.length-1][0])
+                    ));
+                });
             }else if($scope.currentMember.geometry.type === 'Point'){
-                center = [c[1], c[0]];
                 $scope.markers = {
                     start: {
                         id: undefined,
@@ -1167,14 +1213,14 @@ angular.module('osm.controllers').controller('RelationController',
                         draggable: false
                     }
                 };
+                leafletService.getMap().then(function(map){
+                    var zoom = map.getZoom();
+                    if (zoom < 15){
+                        zoom = 16;
+                    }
+                    map.setView(L.latLng(c[1], c[0]), zoom);
+                });
             }
-            leafletService.getMap().then(function(map){
-                var zoom = map.getZoom();
-                if (zoom < 17){
-                    zoom = 17;
-                }
-                map.setView(L.latLng(center[0], center[1]), zoom);
-            });
         };
         var onEachFeature = function(feature, layer) {
             layer.on('click', function () {
@@ -1257,17 +1303,40 @@ angular.module('osm.controllers').controller('RelationController',
         $scope.displayRelationLayer = function(){
             leafletService.displaylayer('relation');
         };
-        var initialize = function(){
+        $scope.addRelationToHistory = function(){
+            var found = false;
+            for (var i = 0; i < $scope.settings.history.length; i++) {
+                if ($scope.settings.history[i].ref === $scope.relationID){
+                    found = true;
+                }
+            }
+            if (!found){
+                $scope.settings.history.push({
+                    ref:$scope.relationID,
+                    name:$scope.relationName
+                });
+            }
+        };
+        $scope.initialize = function(){
             $scope.loggedin = $scope.settings.credentials;
-
+            if ($scope.relationID === undefined){
+                return;
+            }
+            /*only for debug purpose
             osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
                 $scope.relationDOM = data;
                 $scope.relationXML = osmService.serialiseXmlToString(data);
             }, function(error){
                 console.error(error);
-            });
+            });*/
+            $scope.loading.relation = true;
+            $scope.loading.relationsuccess = false;
+            $scope.loading.relationerror = false;
             osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
                 function(data){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = true;
+                    $scope.loading.relationerror = false;
                     $scope.relationXMLFull = osmService.serialiseXmlToString(data);
                     $scope.relationGeoJSON = osmService.relationXmlToGeoJSON($scope.relationID, data);
                     $scope.members = $scope.relationGeoJSON.members;
@@ -1278,6 +1347,7 @@ angular.module('osm.controllers').controller('RelationController',
                             break;
                         }
                     }
+                    $scope.addRelationToHistory();
                     $scope.relationGeoJSON.options.onEachFeature = onEachFeature;
                     leafletService.addGeoJSONLayer(
                         'relation',
@@ -1285,11 +1355,14 @@ angular.module('osm.controllers').controller('RelationController',
                         $scope.relationGeoJSON.options
                     );
                 }, function(error){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = false;
+                    $scope.loading.relationerror = true;
                     console.error(error);
                 }
             );
         };
-        initialize();
+        $scope.initialize();
     }]
 );
 angular.module('osm.controllers').controller('RelationSearchController',
@@ -1371,6 +1444,9 @@ angular.module('osm.controllers').controller('ParentsRelationsController',
     ['$scope', '$routeParams', 'osmService',
     function($scope, $routeParams, osmService){
         $scope.parents = [];
+        if ($routeParams.relationid === undefined){
+            return;
+        }
         osmService.get('/0.6/relation/' + $routeParams.relationid + '/relations')
             .then(function(data){
                 var relations = data.getElementsByTagName('relation');
@@ -1386,7 +1462,7 @@ angular.module('osm.controllers').controller('ParentsRelationsController',
 );
 /*jshint strict:false */
 /*global angular:false */
-/*global L:false */
+
 angular.module('osm.services').factory('settingsService',
     ['$localStorage', function($localStorage){
         return {
@@ -1397,12 +1473,12 @@ angular.module('osm.services').factory('settingsService',
                 credentials: '',
                 nodes: [],
                 changeset: '',
-                API: 'http://api.openstreetmap.org/api',
+                API: 'http://api.openstreetmap.fr/api',
                 changesetID: '',
                 osmtags: {},
                 osmfilter: [],
                 geojsonLayers:[],
-                preferAdding: false
+                history:[]
             })
         };
     }]
