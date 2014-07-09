@@ -61,6 +61,7 @@
                   <div ng-if="member.type !== 'relation'">
                     [{{members.indexOf(member)}}] {{member.type}}/
                     <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}}</a> {{member.name}}
+                    <i class="fa fa-warning ng-hide" ng-show="!fitWithSibling(member)">Fix oreder</i>
                   </div>
                 </td>
                 <td>
