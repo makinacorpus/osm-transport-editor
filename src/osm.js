@@ -6,6 +6,11 @@ angular.module('osm').filter('slice', function() {
         return (arr || []).slice(start, end);
     };
 });
+angular.module('osm').filter('reverse', function() {
+    return function(items) {
+        return items.slice().reverse();
+    };
+});
 angular.module('osm.services').factory('osmService',
     ['$base64', '$http', '$q', 'settingsService',
     function ($base64, $http, $q, settingsService) {
@@ -335,16 +340,13 @@ angular.module('osm.services').factory('osmService',
             },
             getTagsFromChildren: function(element){
                 var children, tags;
-                tags = [];
+                tags = {};
                 for (var i = 0; i < element.children.length; i++) {
                     children = element.children[i];
                     if (children.tagName !== 'tag'){
                         continue;
                     }
-                    tags.push({
-                        k: children.getAttribute('k'),
-                        v: children.getAttribute('v')
-                    });
+                    tags[children.getAttribute('k')] = children.getAttribute('v');
                 }
                 return tags;
             },
@@ -363,15 +365,16 @@ angular.module('osm.services').factory('osmService',
             relationXmlToGeoJSON: function(relationID, relationXML){
                 var self = this;
                 var features = [];
+                var relations = [];
                 var result = {
                     type: 'FeatureCollection',
-                    tags: [],
-                    members:[],
                     properties: {
                         id: relationID
                     },
                     options: {},
-                    features: features
+                    members:[],
+                    features: features,
+                    relations: relations
                 };
                 var relation = relationXML.getElementById(relationID);
                 result.properties.visible = relation.getAttribute('visible');
@@ -403,14 +406,8 @@ angular.module('osm.services').factory('osmService',
                         </way>
                          */
                         //get tags -> geojson properties
-                        tags = self.getTagsFromChildren(memberElement);
-                        properties = {};
-                        for (var k = 0; k < tags.length; k++) {
-                            if (tags[k].k === 'name'){
-                                member.name = tags[k].v;
-                            }
-                            properties[tags[k].k] = tags[k].v;
-                        }
+                        properties = self.getTagsFromChildren(memberElement);
+                        member.name = properties.name;
                         if (memberElement.tagName === 'way'){
                             coordinates = [];
                             feature = {
@@ -447,22 +444,26 @@ angular.module('osm.services').factory('osmService',
                                 }
                             };
                             features.push(feature);
+                        }else if (memberElement.tagName === 'relation'){
+                            relations.push({
+                                properties: properties,
+                                type:'relation',
+                                ref: m.getAttribute('ref'),
+                                id: m.getAttribute('ref'),
+                                role: m.getAttribute('role')
+                            });
                         }
                     }
                 }
-                result.tags = self.getTagsFromChildren(relation);
-                for (var i = 0; i < result.tags.length; i++) {;
-                    result.tags[i];
-                    if (result.tags[i].k === 'colour'){
-                        result.options.color = result.tags[i].v;
-                    }else if (result.tags[i].k === 'color'){
-                        result.options.color = result.tags[i].v;
-                    }
+                result.properties = self.getTagsFromChildren(relation);
+                if (result.properties.colour !== undefined){
+                    result.options.color = result.properties.colour;
                 }
                 return result;
             },
             relationGeoJSONToXml: function(relationGeoJSON){
                 var i;
+                //BROKEN
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
                 var settings = settingsService.settings;
@@ -478,9 +479,9 @@ angular.module('osm.services').factory('osmService',
                     output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
                 }
 
-                var tags = relationGeoJSON.tags;
-                for (i = 0; i < tags.length; i++) {
-                    output += '    <tag k="'+ tags[i].k +'" v="'+tags[i].v +'"/>\n';
+                var tags = relationGeoJSON.properties;
+                for (var k in tags) {
+                    output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
                 }
                 output += '  </relation>\n';
                 output += '</osm>';

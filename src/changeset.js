@@ -6,7 +6,8 @@ angular.module('osm.controllers').controller('ChangesetController',
 	function($scope, $routeParams, settingsService, osmService){
 		console.log('init ChangesetController');
         $scope.settings = settingsService.settings;
-        $scope.comment = 'Working on relation '+$routeParams.relationid;
+        $scope.relationId = $routeParams.lineRelationId || $routeParams.masterRelationId || $routeParams.mainRelationId;
+        $scope.comment = 'Working on relation ' + $scope.relationId;
         $scope.createChangeset = function(){
             osmService.createChangeset($scope.comment).then(
                 function(data){

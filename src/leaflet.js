@@ -248,20 +248,21 @@ angular.module('osm.controllers').controller('LeafletController',
             });
         };
         $scope.addNodeToRelation = function(node, newIndex){
-            var features = $scope.relationGeoJSON.features;
+            var features = $scope.relation.features;
             features.push($scope.currentNode);
             $scope.members.push({
                 type: $scope.currentNode.geometry.type === 'LineString' ? 'way' : 'node',
                 ref: $scope.currentNode.id,
-                role: ''
+                role: '',
+                name: $scope.currentNode.properties.name
             });
             if (!isNaN(newIndex)){
                 $scope.moveMemberFromIndexToIndex($scope.members.length-1, newIndex);
             }
             leafletService.addGeoJSONLayer(
                 'relation',
-                $scope.relationGeoJSON,
-                $scope.relationGeoJSON.options
+                $scope.relation,
+                $scope.relation.options
             );
         };
         $scope.addGeoJSON = function(uri){
