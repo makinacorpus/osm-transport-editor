@@ -626,7 +626,7 @@ angular.module('osm.services').factory('osmService',
                             deferred.resolve(data.data.query.results.json);
                         }
                     }, function(error){
-                        deferred.rejec(error);
+                        deferred.reject(error);
                     });
                 return deferred.promise;
             },

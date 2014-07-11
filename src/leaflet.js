@@ -4,7 +4,7 @@
 L.Icon.Default.imagePath = 'images/';
 
 angular.module('osm.services').factory('leafletService',
-    ['leafletData', function(leafletData){
+    ['$q', 'leafletData', 'osmService', function($q, leafletData, osmService){
         return {
             center: {lat: 47.2383, lng: -1.5603, zoom: 11},
             geojson: undefined,
@@ -35,6 +35,7 @@ angular.module('osm.services').factory('leafletService',
                     if (map.hasLayer(oldLayer)){
                         map.removeLayer(oldLayer);
                     }
+                    debugger;
                     self.geojsonLayers[id].addTo(map);
                 });
             },
@@ -48,12 +49,48 @@ angular.module('osm.services').factory('leafletService',
                 });
             },
             displayLayer: function(id){
+                console.log('display '+ id);
                 var layer = this.geojsonLayers[id];
                 leafletData.getMap().then(function(map){
+                    debugger;
                     if (!map.hasLayer(layer)){
                         layer.addTo(map);
                     }
                 });
+            },
+            loadExternalLayers: function(uris){
+                var self = this;
+                var onEachFeature = function(feature, layer) {
+                    if (feature.properties) {
+                        var html = '<ul>';
+                        for (var propertyName in feature.properties) {
+                            html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                        }
+                        html += '</ul>';
+                        layer.bindPopup(html);
+                    }
+                };
+                var uri;
+                for (var i = 0; i < uris.length; i++) {
+                    uri = uris[i];
+//                    osmService.yqlJSON(uri).then(getGeoJSONLoader(uri)()); 
+                    osmService.yqlJSON(uri).then(function(geojson){
+                        console.log('add layer'+uri);
+                        self.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
+                    });
+                }
+            },
+            getBBox: function(){
+                var self = this;
+                var deferred = $q.defer();
+                self.getMap().then(function(map){
+                    var b = map.getBounds();
+                    //var bbox = '' + b.getWest() + ',' + b.getSouth() + ',' + b.getEast() + ',' + b.getNorth();
+                    // s="47.1166" n="47.310" w="-1.7523" e="-1.3718
+                    var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
+                    deferred.resolve(bbox);
+                });
+                return deferred.promise;
             }
         };
     }]
@@ -67,35 +104,7 @@ angular.module('osm.controllers').controller('LeafletController',
         $scope.zoomLevel = leafletService.center.zoom;
         $scope.layers = leafletService.layers;
         $scope.geojson = leafletService.geojson;
-        var style = function(feature) {
-            if (feature.properties === undefined){
-                return;
-            }
-            var tags = feature.properties.tags;
-            if (tags === undefined){
-                return;
-            }
-            if (tags.building !== undefined){
-                return {
-                    fillColor: 'red',
-                    weight: 2,
-                    opacity: 1,
-                    color: 'red',
-                    fillOpacity: 0.4
-                };
-            }
-            if (tags.amenity !== undefined){
-                if (tags.amenity === 'parking'){
-                    return {
-                        fillColor: 'blue',
-                        weight: 2,
-                        opacity: 1,
-                        color: 'blue',
-                        fillOpacity: 0.4
-                    };
-                }
-            }
-        };
+        $scope.loading = {};
         var idIcon = L.icon({
             iconUrl: 'images/id-icon.png',
             shadowUrl: 'images/marker-shadow.png',
@@ -109,6 +118,7 @@ angular.module('osm.controllers').controller('LeafletController',
             return L.marker(latlng, {icon: idIcon});
         };
         var onEachFeature = function(feature, layer) {
+            //load clicked feature as '$scope.currentNode'
             layer.on('click', function (e) {
                 $scope.currentNode = feature;
                 //load relation that node is member of
@@ -125,25 +135,15 @@ angular.module('osm.controllers').controller('LeafletController',
                                 name: osmService.getNameFromTags(relations[i])
                             });
                         }
-                    }, function(){});
+                    }, function(error){
+                        console.error(error);
+                    });
                 }
             });
         };
         var osmGEOJSONOptions = {
-            style : style,
             pointToLayer: pointToLayer,
             onEachFeature: onEachFeature
-        };
-        var getBBox = function(){
-            var deferred = $q.defer();
-            leafletService.getMap().then(function(map){
-                var b = map.getBounds();
-                //var bbox = '' + b.getWest() + ',' + b.getSouth() + ',' + b.getEast() + ',' + b.getNorth();
-                // s="47.1166" n="47.310" w="-1.7523" e="-1.3718
-                var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
-                deferred.resolve(bbox);
-            });
-            return deferred.promise;
         };
         $scope.removeOverpassLayer = function(){
             leafletService.getMap().then(function(map){
@@ -154,6 +154,10 @@ angular.module('osm.controllers').controller('LeafletController',
             });
         };
         $scope.overpassToLayer = function(query, filter){
+            var deferred = $q.defer();
+            var onError = function(error){
+                deferred.reject(error);
+            };
             osmService.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
                     if ($scope.overpassLayer !== undefined){
@@ -161,11 +165,26 @@ angular.module('osm.controllers').controller('LeafletController',
                     }
                     $scope.overpassLayer = L.geoJson(geojson, osmGEOJSONOptions);
                     $scope.overpassLayer.addTo(map);
-                });
+                    deferred.resolve($scope.overpassLayer);
+                }, onError);
             });
+            return deferred.promise;
         };
         $scope.loadOverpassBusStop = function(){
-            getBBox().then(function(bbox){
+            $scope.loading.busstop = true;
+            $scope.loading.busstopOK = false;
+            $scope.loading.busstopKO = false;
+            var onError = function(){
+                $scope.loading.busstop = false;
+                $scope.loading.busstopOK = false;
+                $scope.loading.busstopKO = true;
+            };
+            var onSuccess = function(){
+                $scope.loading.busstop = false;
+                $scope.loading.busstopOK = true;
+                $scope.loading.busstopKO = false;
+            };
+            leafletService.getBBox().then(function(bbox){
                 var filter = function(feature){
                     return feature.geometry.type !== 'Point';
                 };
@@ -183,11 +202,24 @@ angular.module('osm.controllers').controller('LeafletController',
                 query += '<recurse type="down"/>';
                 query += '<print mode="skeleton" order="quadtile"/>';
                 query += '</osm-script>';
-                $scope.overpassToLayer(query, filter);
-            });
+                $scope.overpassToLayer(query, filter).then(onSuccess,onError);
+            },onError);
         };
         $scope.loadOverpassWays = function(){
-            getBBox().then(function(bbox){
+            $scope.loading.ways = true;
+            $scope.loading.waysOK = false;
+            $scope.loading.waysKO = false;
+            var onError = function(){
+                $scope.loading.ways = false;
+                $scope.loading.waysOK = false;
+                $scope.loading.waysKO = true;
+            };
+            var onSuccess = function(){
+                $scope.loading.ways = false;
+                $scope.loading.waysOK = true;
+                $scope.loading.waysKO = false;
+            };
+            leafletService.getBBox().then(function(bbox){
                 var query = '<?xml version="1.0" encoding="UTF-8"?>';
                 query += '<osm-script output="json" timeout="25"><union>';
                 query += '<query type="way">';
@@ -201,17 +233,16 @@ angular.module('osm.controllers').controller('LeafletController',
                 var filter = function(feature){
                     return feature.geometry.type !== 'LineString';
                 };
-                $scope.overpassToLayer(query, filter);
-            });
-        };
-        $scope.loadOSMNodes = function(){
-            $scope.loadOSMData(function(feature){
-                return feature.geometry.type !== 'Point';
-            });
+                $scope.overpassToLayer(query, filter).then(onSuccess, onError);
+            }, onError);
         };
         $scope.loadOSMWays = function(){
             $scope.loadOSMData(function(feature){
                 return feature.geometry.type !== 'LineString';
+            }, function(){
+                $scope.loading.ways = false;
+                $scope.loading.waysOK = false;
+                $scope.loading.waysKO = true;
             });
         };
         $scope.loadBusStop = function(){
@@ -268,54 +299,32 @@ angular.module('osm.controllers').controller('LeafletController',
         $scope.addGeoJSON = function(uri){
             if ($scope.settings.geojsonLayers.indexOf(uri) === -1){
                 $scope.settings.geojsonLayers.push(uri);
-                reloadExternalLayers();
             }
+            leafletService.loadExternalLayers($scope.settings.geojsonLayers);
         };
         $scope.removeGeoJSON = function(uri){
             var index = $scope.settings.geojsonLayers.indexOf(uri);
             if (index !== -1){
                 $scope.settings.geojsonLayers.splice(index, 1);
-                leafletService.hideLayer(uri);
             }
+            leafletService.hideLayer(uri);
         };
         $scope.hideGeoJSON = function(uri){
             leafletService.hideLayer(uri);
         };
         $scope.displayGeoJSON = function(uri){
+            console.log('display '+ uri);
             leafletService.displayLayer(uri);
         };
 
-        //bind events
+        //initialize
         leafletService.getMap().then(function(map){
             $scope.map = map;
-            reloadExternalLayers();
+            leafletService.loadExternalLayers($scope.settings.geojsonLayers);
             map.on('zoomend', function(e){
                 $scope.zoomLevel = map.getZoom();
             });
-        });
-        $scope.externalLayers = {};
-        var reloadExternalLayers = function(){
-            var onEachFeature = function(feature, layer) {
-                if (feature.properties) {
-                    var html = '<ul>';
-                    for (var propertyName in feature.properties) {
-                        html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
-                    }
-                    html += '</ul>';
-                    layer.bindPopup(html);
-                }
-            };
-            console.log('load external geojson layers');
-            var uris = $scope.settings.geojsonLayers;
-            var uri;
-            var overlays = {};
-            for (var i = 0; i < uris.length; i++) {
-                uri = uris[i];
-                osmService.yqlJSON(uri).then(function(geojson){
-                    leafletService.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
-                });
-            }
-        };
-        reloadExternalLayers();
+        });        
+        leafletService.loadExternalLayers($scope.settings.geojsonLayers);
     }]
 );

@@ -1,12 +1,13 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
-    $routeProvider.when('/:mainRelationId/:masterRelationId/:lineRelationId', {
-        templateUrl: 'partials/line.html',
-        controller: 'LineRelationController'
-    });
-}]);
+angular.module('osm').directive('moveMembers', function(){
+    return {
+        restrict: 'A',
+        replace: true,
+        templateUrl: 'partials/moveMembers.html'
+    };
+});
 
 angular.module('osm.controllers').controller('MembersController',
     ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
