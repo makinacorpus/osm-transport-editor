@@ -1,0 +1,16 @@
+<div class="btn-group" dropdown>
+  <button type="button" class="btn btn-default dropdown-toggle">
+    <i class="fa fa-globe"></i><span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+    <li><a target="_blank" ng-href="https://openstreetmap.org/relation/{{relationId}}" translate>OSM</a></li>
+    <li><a target="_blank" ng-href="https://openstreetmap.org/edit?relation={{relationId}}" translate>iD</a></li>
+    <li><a target="_blank" ng-href="http://www.openstreetmap.org/edit?editor=potlatch2&zoom=11&relation={{relationId}}" translate>Potlatch2</a></li>
+    <li><a target="_blank" ng-href="http://localhost:8111/import?url=http://api.openstreetmap.org/api/0.6/relation/{{relationId}}/full" translate>JOSM</a></li>
+    <li><a target="_blank" ng-href="http://osm.virtuelle-loipe.de/history/?type=relation&ref={{relationId}}" translate>History</a></li>
+    <li><a target="_blank" ng-href="http://ra.osmsurround.org/analyze.jsp?relationId={{relationId}}" translate>Analyse</a></li>
+    <li><a target="_blank" ng-href="http://api.openstreetmap.fr/analyse/cgi-bin/index.py?relation={{relationId}}" translate>Analyse fr</a></li>
+    <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/relation.jsp?id={{relationId}}" translate>Manage</a></li>
+    <li><a target="_blank" ng-href="http://osmrm.openstreetmap.de/gpx.jsp?relation={{relationId}}" translate>GPX</a></li>
+  </ul>
+</div>

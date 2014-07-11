@@ -1,0 +1,73 @@
+<div class="row ng-hide" ng-show="relation">
+	<div class="col-md-7">
+	    <ol class="breadcrumb">
+	      <li><a ng-href="/#/{{mainRelationId}}">Network</a></li>
+	      <li class="active">{{relation.tags.name}}</li>
+	    </ol>
+		<h1>Master: {{relation.tags.name}}
+			<a ng-href="{{relation.tags.url}}" target="_blank" class="ng-hide" ng-show="relation.tags.url"><i class="fa fa-external-link"></i></a>
+		</h1>
+        <div class="form-group ng-hide" style="text-align:right" ng-show="loggedin">
+          <div open-relation-ext relation-id="relationID"></div>
+          <button ng-controller="SaveRelationController" class="btn btn-primary" ng-disabled="!loggedin" ng-click="saveRelation()">Save
+            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
+            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
+            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
+          </button>
+		</div>
+		<div class="panel panel-default">
+			<div class="panel-heading">Lines</div>
+			<div class="panel-body">
+				<table class="table" ng-controller="MembersController">
+					<tr>
+						<th><i class="fa fa-wheelchair"></i></th>
+						<th>Ref</th>
+						<th>Name</th>
+						<th>Role</th>
+						<th class="ng-hide" ng-show="loggedin">Actions</th>
+					</tr>
+					<tr ng-repeat="member in relation.relations">
+						<td>
+							<i class="fa fa-wheelchair ng-hide" ng-show="member.tags.wheelchair"></i>
+						</td>
+						<td style="background-color: {{member.tags.colour}}">
+							<span style="color: {{member.tags.text_colour}}">{{member.tags.ref}}</span>
+						</td>
+						<td>
+							<a ng-href="/#{{mainRelationId}}/{{masterRelationId}}/{{member.id}}">{{member.tags.name}}</a>
+						</td>
+						<td>
+							<div class="form-group ng-hide" ng-show="!loggedin">{{member.role}}</div>
+							<div class="form-group ng-hide" ng-show="loggedin">
+								<input type="text" class="form-control" ng-model="member.role"/>
+							</div>
+						</td>
+						<td class="ng-hide" ng-show="loggedin">
+							<div class="btn-group">
+			                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+			                      <i class="fa fa-arrow-circle-o-up"></i>
+			                    </button>
+			                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+			                      <i class="fa fa-arrow-circle-o-down"></i>
+			                    </button>
+								<div open-relation-ext relation-id="member.ref"></div>
+			                    <button class="btn btn-danger" ng-click="removeMemberFromRelation(member)">
+			                      <i class="fa fa-trash-o"></i>
+			                    </button>
+			                  </div>
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+	<div class="col-md-5">
+	    <div ng-include="'./partials/settings.html'"></div>
+		<div class="panel panel-default">
+			<div class="panel-heading">Tags</div>
+			<div class="panel-body">
+				<div tags-table tags="relation.tags"></div>
+			</div>
+		</div>
+	</div>
+</div>

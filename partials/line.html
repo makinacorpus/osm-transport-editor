@@ -1,0 +1,222 @@
+<div id="maps-wrapper" class="row">
+  <div class="col-md-6">
+    <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
+    <alert type="'danger'" ng-show="loading.relationerror">
+      A problem occurs during the loading of the relation.
+    </alert>
+    <div class="panel panel-default ng-hide" ng-show="relation">
+      <div class="panel-body">
+        <ol class="breadcrumb">
+          <li><a ng-href="/#/{{mainRelationId}}">Network</a></li>
+          <li><a ng-href="/#/{{mainRelationId}}/{{masterRelationId}}">Master</a></li>
+          <li class="active">{{relation.tags.name}}</li>
+        </ol>
+        <h1 style="background-color: {{relation.tags.colour}};color: {{relation.tags.text_colour}}">{{relation.tags.name}}</h1>
+        <div class="form-group pull-right ng-hide" ng-show="loggedin">
+          <div open-relation-ext relation-id="relationID"></div>
+          <button ng-controller="SaveRelationController" class="btn btn-primary" ng-click="saveRelation()">Save
+            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
+            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
+            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
+          </button>
+        </div>
+
+        <tabset>
+          <tab heading="members {{members.length}}">
+            <div class="form-group pull-left">
+              <input class="form-control" placeholder="Search for members" type="search" ng-model="q"/>
+            </div>
+            <div class="btn-group pull-right">
+              <button class="btn btn-default" ng-disabled="!hasPreviousMembers()" ng-click="displayPreviousMembers()">
+                  <i class="fa fa-angle-left"></i>
+              </button>
+              <button class="btn btn-default" ng-disabled="!hasNextMembers()" ng-click="displayNextMembers()">
+                  <i class="fa fa-angle-right"></i>
+              </button>
+              <button class="btn btn-default" ng-click="toggleBatchMembers()">
+                  Display All / batch
+              </button>
+            </div>
+            <table class="table table-bordered" ng-controller="MembersController">
+              <tr>
+                <th>[index]</th>
+                <th>type</th>
+                <th>ref</th>
+                <th class="ng-hide" ng-show="loggedin">actions</th>
+              </tr>
+              <tr ng-repeat="member in members | filter:q | slice:start:end">
+                <td>
+                  <i class="fa fa-warning ng-hide" ng-show="!fitWithSibling(member)"></i>[{{members.indexOf(member)}}]
+                </td>
+                <td>
+                  {{member.type}}
+                </td>
+                <td>
+                  <div ng-if="member.type === 'relation'">
+                    {{member.ref}} {{member.name}}
+                  </div>
+                  <div ng-if="member.type !== 'relation'">
+                    <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}}</a>
+                  </div>
+                </td>
+                <td class="ng-hide" ng-show="loggedin">
+                  <div class="btn-group">
+                    <button class="btn btn-default" ng-click="setCurrentRelation(member)" ng-show="member.type === 'relation'">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                    <button  ng-show="member.type !== 'relation'" ng-class="{btn: 1, 'btn-default': member.ref !== displayedMember, 'btn-primary': member.ref === displayedMember}" ng-click="displayMember(member)">
+                      <i ng-class="{fa: 1, 'fa-map-marker': member.type === 'node', 'fa-road': member.type === 'way' }"></i>
+                    </button>
+
+                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+                      <i class="fa fa-arrow-circle-o-up"></i>
+                    </button>
+                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+                      <i class="fa fa-arrow-circle-o-down"></i>
+                    </button>
+                    <div class="ng-hide" ng-show="member.type === 'relation'">
+                      <div open-relation-ext relation-id="member.ref"></div>
+                    </div>
+                    <button class="btn btn-danger" ng-click="removeMemberFromRelation(member)">
+                      <i class="fa fa-trash-o"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </table>
+            <div class="btn-group pull-right">
+              <button class="btn btn-default" ng-disabled="!hasPreviousMembers()" ng-click="displayPreviousMembers()">
+                  <i class="fa fa-angle-left"></i>
+              </button>
+              <button class="btn btn-default" ng-disabled="!hasNextMembers()" ng-click="displayNextMembers()">
+                  <i class="fa fa-angle-right"></i>
+              </button>
+              <button class="btn btn-default" ng-click="toggleBatchMembers()">
+                  Display All / batch
+              </button>
+            </div>
+            <div class="form-inline ng-hide" ng-show="loggedin">
+              <div class="form-group">
+                <input ng-model="oldIndex" type="number" class="form-control" placeholder="Move item from [x]"/>
+              </div>
+              <div class="form-group">
+                <input ng-model="newIndex" type="number" class="form-control" placeholder="to [y]"/>
+              </div>
+              <button class="btn btn-default" ng-click="moveMemberFromIndexToIndex(oldIndex, newIndex)">Move</button>
+            </div>
+          </tab>
+          <tab heading="tags {{howManyTags}}">
+            <table tags-table tags="relation.tags"></table>
+          </tab>
+        </tabset>
+      </div>
+    </div>
+    <div class="panel panel-default" ng-controller="RelationSearchController">
+      <div class="panel-heading">Search for relations (overpass)</div>
+      <div class="panel-body">
+        <div class="input-group margin-bottom-sm" ui-keypress="{13:'search()'}">
+          <input type="search" class="form-control" ng-model="pattern" placeholder="relation pattern"/>
+          <span class="input-group-addon">
+            <i class="fa fa-refresh fa-spin" ng-show="loading.relations"></i>
+            <i class="fa fa-check fa-fw text-success" ng-show="loading.relationssuccess"></i>
+            <i class="fa fa-times fa-fw text-danger" ng-show="loading.relationserror"></i>
+          </span>
+        </div>
+        <div relations-table relations="relations"></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="col-md-6" ng-controller="LeafletController">
+
+    <div ng-include="'./partials/settings.html'"></div>
+
+    <leaflet center="center" markers="markers" layers="layers" width="100%" height="500" geojson="leafletGeojson"></leaflet>
+    <div class="panel panel-default ng-hide" ng-show="relation">
+      <div class="panel-heading">
+        <div class="btn-group">
+          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassWays()" translate>display ways</a>
+          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassBusStop()" translate>display bus stop</a>
+          <a class="btn btn-danger" ng-show="overpassLayer" ng-click="removeOverpassLayer()">hide items</a>
+        </div>
+        <a target="_blank" ng-href="http://www.openstreetmap.org/edit#map={{center.zoom}}/{{center.lat}}/{{center.lng}}" translate class="pull-right">iD</a>
+
+      </div>
+      <div class="panel-body">
+        <div class="form-inline ng-hide" ng-show="loggedin">
+          <button ng-disabled="!currentNode" class="btn btn-primary btn-lg" ng-click="addNodeToRelation(currentNode, newIndex)">Add selected item ({{currentNode.id}}) to relation
+          </button>
+          <div class="form-group">
+            <input class="form-control" type="number" ng-model="newIndex" placeholder="At index (number)"/>
+          </div>
+        </div>
+        <br/>
+        <tabset class="ng-hide" ng-show="currentNode">
+          <tab heading="tags">
+            <table class="table table-condensed">
+              <tr ng-repeat="(key, value) in currentNode.properties">
+                <td>{{key}}</td>
+                <td>{{value}}</td>
+              </tr>
+            </table>
+          </tab>
+          <tab heading="members of {{currentNodeParents.length}} relation(s)">
+            <div relations-table relations="currentNodeParents"></div>
+          </tab>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">GeoJSON layers</div>
+      <div class="panel-body">
+        <table class="table table-bordered">
+          <tr>
+            <th width="65%">
+              <div class="form-group">
+                  <input type="uri" ng-model="newGeoJSONURI" class="form-control" placeholder="geojson URI"/>
+              </div>
+            </th>
+            <th>
+              <button class="btn btn-default" ng-click="addGeoJSON(newGeoJSONURI)">Add</button>
+            </th>
+          </tr>
+          <tr ng-repeat="geojson in settings.geojsonLayers">
+            <td><a href="{{geojson}}" target="_blank">{{geojson}}</a></td>
+            <td>
+              <div class="btn-group">
+                <button class="btn btn-danger" ng-click="removeGeoJSON(geojson)">delete
+                    <i class="fa fa-trash-o"></i>
+                </button>
+                <button class="btn btn-default" ng-click="hideGeoJSON(geojson)">hide</button>
+                <button class="btn btn-default" ng-click="displayGeoJSON(geojson)">display</button>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <br/>
+    <div class="panel panel-default ng-hide">
+      <div class="panel-heading">DEBUG</div>
+      <div class="panel-body">
+        <tabset>
+          <tab heading="relation (xml)">
+            <pre>{{relationXML}}</pre>
+          </tab>
+          <tab heading="relation full (xml)">
+            <pre>{{relationXMLFull}}</pre>
+          </tab>
+          <tab heading="relation output (xml)">
+            <pre>{{relationXMLOutput}}</pre>
+          </tab>
+          <tab heading="currentNode">
+            <p>For debug purpose</p>
+            <pre>{{currentNode}}</pre>
+          </tab>
+        </tabset>
+      </div>
+    </div>
+  </div>
+
+</div>

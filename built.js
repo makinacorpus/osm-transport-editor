@@ -1276,7 +1276,7 @@ angular.module('osm.services').factory('osmService',
                             features.push(feature);
                         }else if (memberElement.tagName === 'relation'){
                             relations.push({
-                                properties: properties,
+                                tags: properties,
                                 type:'relation',
                                 ref: m.getAttribute('ref'),
                                 id: m.getAttribute('ref'),
@@ -1285,7 +1285,7 @@ angular.module('osm.services').factory('osmService',
                         }
                     }
                 }
-                result.properties = self.getTagsFromChildren(relation);
+                result.tags = self.getTagsFromChildren(relation);
                 if (result.properties.colour !== undefined){
                     result.options.color = result.properties.colour;
                 }
@@ -1293,7 +1293,6 @@ angular.module('osm.services').factory('osmService',
             },
             relationGeoJSONToXml: function(relationGeoJSON){
                 var i;
-                //BROKEN
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
                 var settings = settingsService.settings;
@@ -1309,7 +1308,7 @@ angular.module('osm.services').factory('osmService',
                     output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
                 }
 
-                var tags = relationGeoJSON.properties;
+                var tags = relationGeoJSON.tags;
                 for (var k in tags) {
                     output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
                 }
@@ -1501,6 +1500,17 @@ angular.module('osm').directive('openRelationExt', function(){
         }
     };
 });
+angular.module('osm').directive('tagsTable', function(){
+    return {
+        restrict: 'A',
+        replace: true,
+        templateUrl: 'partials/tagsTable.html',
+        controller: 'TagsTableController',
+        scope: {
+            tags: '='
+        }
+    };
+});
 
 angular.module('osm.controllers').controller('RelationsTableController',
     ['$scope', '$routeParams', '$location', 'osmService',
@@ -1510,6 +1520,23 @@ angular.module('osm.controllers').controller('RelationsTableController',
             if (member.type === 'relation'){
                 $location.path('/relation/'+member.ref);
             }
+        };
+    }]
+);
+angular.module('osm.controllers').controller('TagsTableController',
+    ['$scope', 'settingsService',
+    function($scope, settingsService){
+        console.log('init TagsTableController');
+        $scope.loggedin = settingsService.settings.credentials;
+        $scope.newTagKey = '';
+        $scope.newTagValue = '';
+        $scope.addTag = function(){
+            if ($scope.newTagKey && $scope.newTagValue){
+                $scope.tags[$scope.newTagKey] = $scope.newTagValue;
+            }
+        };
+        $scope.removeTag = function(key){
+            delete $scope.tags[key];
         };
     }]
 );
@@ -1606,7 +1633,8 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.savingsuccess = false;
             $scope.loading.savingerror = false;
             $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relation);
-/*            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+            console.log($scope.relationXMLOutput);
+            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
                     $scope.relation.properties.version = data;
                     $scope.loading.saving = false;
@@ -1618,7 +1646,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
                     $scope.loading.savingerror = true;
                 }
             );
-*/
+
         };
     }]
 );

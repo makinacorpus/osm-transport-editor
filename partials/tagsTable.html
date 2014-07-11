@@ -1,0 +1,36 @@
+<table class="table table-bordered">
+  <tr>
+    <th>key</th>
+    <th>value</th>
+    <th class="ng-hide" ng-show="loggedin">actions</th>
+  </tr>
+  <tr ng-repeat="(k,v) in tags">
+    <td>{{k}}</td>
+    <td>
+    	<div class="ng-hide" ng-show="!loggedin">
+			{{v}}
+		</div>
+    	<div class="ng-hide" ng-show="loggedin">
+			<input class="form-control" type="text" ng-model="v"/>
+		</div>
+    </td>
+    <td>
+    	<button class="btn btn-danger" ng-click="removeTag(k)"><i class="fa fa-trash-o"></i></button>
+    </td>
+  </tr>
+  <tr class="ng-hide" ng-show="loggedin">
+  	<td>
+    	<div class="form-group">
+			<input class="form-control" type="text" ng-model="newTagKey"/>
+		</div>
+  	</td>
+  	<td>
+    	<div class="form-group">
+			<input class="form-control" type="text" ng-model="newTagValue"/>
+		</div>
+  	</td>
+  	<td>
+		<button class="btn btn-default" ng-click="addTag()"><i class="fa fa-plus-square-o"></i></button>
+	</td>
+  </tr>
+</table>
