@@ -95,15 +95,7 @@
                   Display All / batch
               </button>
             </div>
-            <div class="form-inline ng-hide" ng-show="loggedin">
-              <div class="form-group">
-                <input ng-model="oldIndex" type="number" class="form-control" placeholder="Move item from [x]"/>
-              </div>
-              <div class="form-group">
-                <input ng-model="newIndex" type="number" class="form-control" placeholder="to [y]"/>
-              </div>
-              <button class="btn btn-default" ng-click="moveMemberFromIndexToIndex(oldIndex, newIndex)">Move</button>
-            </div>
+            <div move-members members="members"></div>
           </tab>
           <tab heading="tags {{howManyTags}}">
             <table tags-table tags="relation.tags"></table>

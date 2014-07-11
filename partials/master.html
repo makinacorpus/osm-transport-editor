@@ -4,7 +4,7 @@
 	      <li><a ng-href="/#/{{mainRelationId}}">Network</a></li>
 	      <li class="active">{{relation.tags.name}}</li>
 	    </ol>
-		<h1>Master: {{relation.tags.name}}
+		<h1>Master: <span  style="background-color: {{relation.tags.colour}};color: {{relation.tags.text_colour}}">{{relation.tags.name}}</span>
 			<a ng-href="{{relation.tags.url}}" target="_blank" class="ng-hide" ng-show="relation.tags.url"><i class="fa fa-external-link"></i></a>
 		</h1>
         <div class="form-group ng-hide" style="text-align:right" ng-show="loggedin">

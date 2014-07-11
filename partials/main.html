@@ -39,6 +39,7 @@
 						</td>
 						<td class="ng-hide" ng-show="loggedin">
 							<div class="btn-group">
+								<button disabled class="btn btn-default">[{{$index}}]</button>
 			                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
 			                      <i class="fa fa-arrow-circle-o-up"></i>
 			                    </button>
@@ -53,6 +54,7 @@
 			              </td>
 					</tr>
 				</table>
+				<div class="ng-hide" ng-show="loggedin" move-members members="relation.relations"></div>
 			</div>
 		</div>
 	</div>
