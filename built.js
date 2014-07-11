@@ -31,7 +31,8 @@ angular.module('osm.controllers').controller('ChangesetController',
 	function($scope, $routeParams, settingsService, osmService){
 		console.log('init ChangesetController');
         $scope.settings = settingsService.settings;
-        $scope.comment = 'Working on relation '+$routeParams.relationid;
+        $scope.relationId = $routeParams.lineRelationId || $routeParams.masterRelationId || $routeParams.mainRelationId;
+        $scope.comment = 'Working on relation ' + $scope.relationId;
         $scope.createChangeset = function(){
             osmService.createChangeset($scope.comment).then(
                 function(data){
@@ -309,20 +310,21 @@ angular.module('osm.controllers').controller('LeafletController',
             });
         };
         $scope.addNodeToRelation = function(node, newIndex){
-            var features = $scope.relationGeoJSON.features;
+            var features = $scope.relation.features;
             features.push($scope.currentNode);
             $scope.members.push({
                 type: $scope.currentNode.geometry.type === 'LineString' ? 'way' : 'node',
                 ref: $scope.currentNode.id,
-                role: ''
+                role: '',
+                name: $scope.currentNode.properties.name
             });
             if (!isNaN(newIndex)){
                 $scope.moveMemberFromIndexToIndex($scope.members.length-1, newIndex);
             }
             leafletService.addGeoJSONLayer(
                 'relation',
-                $scope.relationGeoJSON,
-                $scope.relationGeoJSON.options
+                $scope.relation,
+                $scope.relation.options
             );
         };
         $scope.addGeoJSON = function(uri){
@@ -382,6 +384,251 @@ angular.module('osm.controllers').controller('LeafletController',
 /*jshint strict:false */
 /*global angular:false */
 
+angular.module('osm').config(['$routeProvider', function($routeProvider) {
+    $routeProvider.when('/:mainRelationId/:masterRelationId/:lineRelationId', {
+        templateUrl: 'partials/line.html',
+        controller: 'LineRelationController'
+    });
+}]);
+
+angular.module('osm.controllers').controller('LineRelationController',
+    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
+    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
+        console.log('init RelationController');
+        $scope.settings = settingsService.settings;
+        $scope.relationID = $routeParams.lineRelationId;
+        $scope.mainRelationId = $routeParams.mainRelationId;
+        $scope.masterRelationId = $routeParams.masterRelationId;
+        $scope.members = [];
+        $scope.tags = [];
+        $scope.markers = {};
+        $scope.displayedMember = 0;
+        $scope.currentNode = '';
+        $scope.loading = {};
+        var cache = {};
+        var getRelationFeatureById = function(id){
+            if (cache.source !== $scope.relation){
+                var tmp;
+                for (var i = 0; i < $scope.relation.features.length; i++) {
+                    tmp = $scope.relation.features[i];
+                    cache[tmp.id] = tmp;
+                }
+            }
+            if (typeof id === 'string'){
+                return cache[parseInt(id, 10)];
+            }
+            return cache[id];
+        };
+        var startIcon = {
+            iconUrl: 'images/marker-start.png',
+            shadowUrl: 'images/marker-shadow.png',
+            iconSize:     [15, 21], // size of the icon
+            shadowSize:   [20, 30], // size of the shadow
+            iconAnchor:   [15, 21], // point of the icon which will correspond to marker's location
+            shadowAnchor: [4, 30],  // the same for the shadow
+            popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
+        };
+        var endIcon = {
+            iconUrl: 'images/marker-start.png',
+            shadowUrl: 'images/marker-shadow.png',
+            iconSize:     [15, 21], // size of the icon
+            shadowSize:   [20, 30], // size of the shadow
+            iconAnchor:   [15, 21], // point of the icon which will correspond to marker's location
+            shadowAnchor: [4, 30],  // the same for the shadow
+            popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
+        };
+        $scope.displayMember = function(member){
+            $scope.displayedMember = member.ref;
+            $scope.currentMember = getRelationFeatureById(member.ref);
+            var c = $scope.currentMember.geometry.coordinates;
+            if ($scope.currentMember.geometry.type === 'LineString'){
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0][0],
+                        lat: c[0][1],
+                        focus: true,
+                        draggable: false
+                    },
+                    end: {
+                        id: undefined,
+                        icon: endIcon,
+                        lng: c[c.length-1][0],
+                        lat: c[c.length-1][1],
+                        focus: false,
+                        draggable: false
+                    }
+                };
+                leafletService.getMap().then(function(map){
+                    map.fitBounds(L.latLngBounds(
+                        L.latLng(c[0][1], c[0][0]),
+                        L.latLng(c[c.length-1][1], c[c.length-1][0])
+                    ));
+                });
+            }else if($scope.currentMember.geometry.type === 'Point'){
+                $scope.markers = {
+                    start: {
+                        id: undefined,
+                        icon: startIcon,
+                        lng: c[0],
+                        lat: c[1],
+                        focus: true,
+                        draggable: false
+                    }
+                };
+                leafletService.getMap().then(function(map){
+                    var zoom = map.getZoom();
+                    if (zoom < 15){
+                        zoom = 16;
+                    }
+                    map.setView(L.latLng(c[1], c[0]), zoom);
+                });
+            }
+        };
+        var onEachFeature = function(feature, layer) {
+            layer.on('click', function () {
+                $scope.currentMember = feature;
+                $scope.displayedMember = feature.id;
+            });
+            if (feature.properties){
+                var html = '<ul>';
+                for (var propertyName in feature.properties) {
+                    html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
+                }
+                html += '</ul>';
+                layer.bindPopup(html);
+            }
+        };
+        $scope.sortRelationMembers = function(){
+            osmService.sortRelationMembers($scope.relation);
+            $scope.members = $scope.relation.members;
+        };
+        //pagination
+        $scope.start = 0;
+        var bsize = 10;
+        $scope.end = $scope.start + bsize;
+        $scope.batchMembers = true;
+        $scope.toggleBatchMembers = function(){
+            if (bsize === $scope.members.length){
+                bsize = 10;
+                $scope.end = $scope.start + bsize;
+            }else{
+                bsize = $scope.members.length;
+                $scope.start = 0;
+                $scope.end = bsize;
+            }
+        };
+        $scope.displayPreviousMembers = function(){
+            $scope.end = $scope.start;
+            $scope.start = $scope.start - bsize;
+        };
+        $scope.displayNextMembers = function(){
+            $scope.start = $scope.end;
+            $scope.end += bsize;
+        };
+        $scope.hasNextMembers = function(){
+            return $scope.end < $scope.members.length;
+        };
+        $scope.hasPreviousMembers = function(){
+            return $scope.start !== 0;
+        };
+        var isFitWith = function(c1, c2){
+            var cc,i,j;
+            for (i = 0; i < c1.length; i++) {
+                cc = c1[i];
+                for (j = 0; j < c2.length; j++) {
+                    if (cc[0] === c2[j][0] && cc[1] === c2[j][1]){
+                        return true;
+                    }
+                }
+            }
+        };
+        $scope.fitWithSibling = function(member){
+            var index = $scope.members.indexOf(member);
+            var current = $scope.relation.features[index];
+            if (current.geometry.type === 'Point'){
+                return true; //not supported
+            }
+            var previous,next;
+            var fitWithPrevious, fitWithNext;
+            if (index > 0){
+                previous = $scope.relation.features[index - 1];
+                if (previous.geometry.type !== 'LineString'){
+                    return false;
+                }
+                fitWithPrevious = isFitWith(
+                    current.geometry.coordinates,
+                    previous.geometry.coordinates
+                );
+            }else{
+                fitWithPrevious = true;
+            }
+            if (index < $scope.members.length - 1){
+                next = $scope.relation.features[index + 1];
+                if (next.geometry.type !== 'LineString'){
+                    return true;
+                }
+                fitWithNext = isFitWith(
+                    current.geometry.coordinates,
+                    next.geometry.coordinates
+                );
+            }else{
+                fitWithNext = true;
+            }
+            return fitWithNext && fitWithPrevious;
+        };
+        $scope.initialize = function(){
+            $scope.loggedin = $scope.settings.credentials;
+            if ($scope.relationID === undefined){
+                return;
+            }
+            /*only for debug purpose
+            osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
+                $scope.relationDOM = data;
+                $scope.relationXML = osmService.serialiseXmlToString(data);
+            }, function(error){
+                console.error(error);
+            });*/
+            $scope.loading.relation = true;
+            $scope.loading.relationsuccess = false;
+            $scope.loading.relationerror = false;
+            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+                function(data){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = true;
+                    $scope.loading.relationerror = false;
+                    $scope.relationXMLFull = osmService.serialiseXmlToString(data);
+                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                    $scope.members = $scope.relation.members;
+                    $scope.howManyTags = Object.keys($scope.relation.properties).length;
+                    for (var property in $scope.relation.tags){
+                    	$scope.tags.push({
+                    		k: property,
+                    		v: $scope.relation.tags[property]
+                    	});
+                    }
+                    $scope.relation.options.onEachFeature = onEachFeature;
+                    leafletService.addGeoJSONLayer(
+                        'relation',
+                        $scope.relation,
+                        $scope.relation.options
+                    );
+                }, function(error){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = false;
+                    $scope.loading.relationerror = true;
+                    console.error(error);
+                }
+            );
+        };
+        $scope.initialize();
+    }]
+);
+
+/*jshint strict:false */
+/*global angular:false */
+
 angular.module('osm.controllers').controller('LoginController',
 	['$scope', 'settingsService','osmService', //'flash',
 	function($scope, settingsService, osmService){//, flash){
@@ -422,9 +669,176 @@ angular.module('osm.controllers').controller('LoginController',
 /*jshint strict:false */
 /*global angular:false */
 
+
+angular.module('osm').config(['$routeProvider', function($routeProvider) {
+    $routeProvider.when('/', {
+        templateUrl: 'partials/main.html',
+        controller: 'MainRelationController'
+    });
+    $routeProvider.when('/:mainRelationId', {
+        templateUrl: 'partials/main.html',
+        controller: 'MainRelationController'
+    });
+    $routeProvider.otherwise({redirectTo: '/'});
+}]);
+
+angular.module('osm.controllers').controller('MainRelationController',
+	['$scope', '$routeParams', 'settingsService', 'osmService',
+	function($scope, $routeParams, settingsService, osmService){
+        $scope.settings = settingsService.settings;
+        $scope.relationID = $routeParams.mainRelationId;
+        $scope.members = [];
+        $scope.loading = {};
+        var initialize = function(){
+            $scope.loggedin = $scope.settings.credentials;
+            if ($scope.relationID === undefined){
+                return;
+            }
+            $scope.loading.relation = true;
+            $scope.loading.relationsuccess = false;
+            $scope.loading.relationerror = false;
+            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+                function(data){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = true;
+                    $scope.loading.relationerror = false;
+                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                    $scope.members = $scope.relation.members;
+                }, function(error){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = false;
+                    $scope.loading.relationerror = true;
+                    console.error(error);
+                }
+            );
+        };
+        initialize();
+	}]
+);
+
+/*jshint strict:false */
+/*global angular:false */
+
+angular.module('osm').config(['$routeProvider', function($routeProvider) {
+    $routeProvider.when('/:mainRelationId/:masterRelationId', {
+        templateUrl: 'partials/master.html',
+        controller: 'MasterRelationController'
+    });
+}]);
+
+
+angular.module('osm.controllers').controller('MasterRelationController',
+	['$scope', '$routeParams', 'settingsService', 'osmService',
+	function($scope, $routeParams, settingsService, osmService){
+        $scope.settings = settingsService.settings;
+        $scope.mainRelationId = $routeParams.mainRelationId;
+        $scope.masterRelationId = $routeParams.masterRelationId;
+        $scope.relationID = $routeParams.masterRelationId;
+        $scope.members = [];
+        $scope.loading = {};
+        var initialize = function(){
+            $scope.loggedin = $scope.settings.credentials;
+            if ($scope.relationID === undefined){
+                return;
+            }
+            $scope.loading.relation = true;
+            $scope.loading.relationsuccess = false;
+            $scope.loading.relationerror = false;
+            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+                function(data){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = true;
+                    $scope.loading.relationerror = false;
+                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                    $scope.members = $scope.relation.members;
+                    $scope.tags = $scope.relation.tags;
+                }, function(error){
+                    $scope.loading.relation = false;
+                    $scope.loading.relationsuccess = false;
+                    $scope.loading.relationerror = true;
+                    console.error(error);
+                }
+            );
+        };
+        initialize();
+
+	}]
+);
+
+/*jshint strict:false */
+/*global angular:false */
+
+angular.module('osm').config(['$routeProvider', function($routeProvider) {
+    $routeProvider.when('/:mainRelationId/:masterRelationId/:lineRelationId', {
+        templateUrl: 'partials/line.html',
+        controller: 'LineRelationController'
+    });
+}]);
+
+angular.module('osm.controllers').controller('MembersController',
+    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
+    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
+        console.log('init MembersController');
+        var moveMember = function(member, from, to) {
+            $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
+            if (member.type === 'relation'){
+                $scope.relation.relations.splice(to, 0, $scope.relation.relations.splice(from, 1)[0]);
+            }else{
+                $scope.relation.features.splice(to, 0, $scope.relation.features.splice(from, 1)[0]);
+            }
+        };
+        var getIndex = function(member){
+            var index = $scope.members.indexOf(member);
+            if (index === -1){
+                //it is not a member, may be a feature or a relation?
+                if (member.type === 'relation'){
+                    index = $scope.relation.relations.indexOf(member);
+                }else if (member.type === 'Feature'){
+                    index = $scope.relation.features.indexOf(member);
+                }
+            }
+            return index;
+        };
+        $scope.moveMemberUp = function(member){
+            var index = getIndex(member);
+            moveMember(member, index, index-1);
+        };
+        $scope.moveMemberDown = function(member){
+            var index = getIndex(member);
+            moveMember(member, index, index+1);
+        };
+        $scope.removeMemberFromRelation = function(member){
+            var index = getIndex(member);
+            $scope.members.splice(index, 1);
+            $scope.relation.features.splice(index, 1);
+            leafletService.addGeoJSONLayer(
+                'relation',
+                $scope.relation,
+                $scope.relation.options
+            );
+        };
+        $scope.moveMemberFromIndexToIndex = function(oldIndex, newIndex){
+            if (isNaN(oldIndex) || isNaN(newIndex)){
+                return;
+            }
+            var member = $scope.members.splice(oldIndex, 1)[0];
+            $scope.members.splice(newIndex, 0, member);
+            var feature = $scope.relation.features.splice(oldIndex, 1)[0];
+            $scope.relation.features.splice(newIndex, 0, feature);
+        };
+    }]
+);
+/*jshint strict:false */
+/*global angular:false */
+
 angular.module('osm').filter('slice', function() {
     return function(arr, start, end) {
         return (arr || []).slice(start, end);
+    };
+});
+angular.module('osm').filter('reverse', function() {
+    return function(items) {
+        return items.slice().reverse();
     };
 });
 angular.module('osm.services').factory('osmService',
@@ -756,16 +1170,13 @@ angular.module('osm.services').factory('osmService',
             },
             getTagsFromChildren: function(element){
                 var children, tags;
-                tags = [];
+                tags = {};
                 for (var i = 0; i < element.children.length; i++) {
                     children = element.children[i];
                     if (children.tagName !== 'tag'){
                         continue;
                     }
-                    tags.push({
-                        k: children.getAttribute('k'),
-                        v: children.getAttribute('v')
-                    });
+                    tags[children.getAttribute('k')] = children.getAttribute('v');
                 }
                 return tags;
             },
@@ -784,15 +1195,16 @@ angular.module('osm.services').factory('osmService',
             relationXmlToGeoJSON: function(relationID, relationXML){
                 var self = this;
                 var features = [];
+                var relations = [];
                 var result = {
                     type: 'FeatureCollection',
-                    tags: [],
-                    members:[],
                     properties: {
                         id: relationID
                     },
                     options: {},
-                    features: features
+                    members:[],
+                    features: features,
+                    relations: relations
                 };
                 var relation = relationXML.getElementById(relationID);
                 result.properties.visible = relation.getAttribute('visible');
@@ -824,14 +1236,8 @@ angular.module('osm.services').factory('osmService',
                         </way>
                          */
                         //get tags -> geojson properties
-                        tags = self.getTagsFromChildren(memberElement);
-                        properties = {};
-                        for (var k = 0; k < tags.length; k++) {
-                            if (tags[k].k === 'name'){
-                                member.name = tags[k].v;
-                            }
-                            properties[tags[k].k] = tags[k].v;
-                        }
+                        properties = self.getTagsFromChildren(memberElement);
+                        member.name = properties.name;
                         if (memberElement.tagName === 'way'){
                             coordinates = [];
                             feature = {
@@ -868,22 +1274,26 @@ angular.module('osm.services').factory('osmService',
                                 }
                             };
                             features.push(feature);
+                        }else if (memberElement.tagName === 'relation'){
+                            relations.push({
+                                properties: properties,
+                                type:'relation',
+                                ref: m.getAttribute('ref'),
+                                id: m.getAttribute('ref'),
+                                role: m.getAttribute('role')
+                            });
                         }
                     }
                 }
-                result.tags = self.getTagsFromChildren(relation);
-                for (var i = 0; i < result.tags.length; i++) {;
-                    result.tags[i];
-                    if (result.tags[i].k === 'colour'){
-                        result.options.color = result.tags[i].v;
-                    }else if (result.tags[i].k === 'color'){
-                        result.options.color = result.tags[i].v;
-                    }
+                result.properties = self.getTagsFromChildren(relation);
+                if (result.properties.colour !== undefined){
+                    result.options.color = result.properties.colour;
                 }
                 return result;
             },
             relationGeoJSONToXml: function(relationGeoJSON){
                 var i;
+                //BROKEN
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
                 var settings = settingsService.settings;
@@ -899,9 +1309,9 @@ angular.module('osm.services').factory('osmService',
                     output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
                 }
 
-                var tags = relationGeoJSON.tags;
-                for (i = 0; i < tags.length; i++) {
-                    output += '    <tag k="'+ tags[i].k +'" v="'+tags[i].v +'"/>\n';
+                var tags = relationGeoJSON.properties;
+                for (var k in tags) {
+                    output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
                 }
                 output += '  </relation>\n';
                 output += '</osm>';
@@ -1070,18 +1480,6 @@ angular.module('osm.services').factory('osmService',
 /*global angular:false */
 /*global L:false */
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
-    $routeProvider.when('/relation', {
-        templateUrl: 'partials/relation.html',
-        controller: 'RelationController'
-    });
-    $routeProvider.when('/relation/:relationid', {
-        templateUrl: 'partials/relation.html',
-        controller: 'RelationController'
-    });
-    $routeProvider.otherwise({redirectTo: '/relation'});
-}]);
-
 angular.module('osm').directive('relationsTable', function(){
     return {
         restrict: 'AE',
@@ -1090,6 +1488,16 @@ angular.module('osm').directive('relationsTable', function(){
         controller: 'RelationsTableController',
         scope: {
             relations: '=relations'
+        }
+    };
+});
+angular.module('osm').directive('openRelationExt', function(){
+    return {
+        restrict: 'A',
+        replace: true,
+        templateUrl: 'partials/openRelationExt.html',
+        scope: {
+            relationId: '='
         }
     };
 });
@@ -1106,309 +1514,6 @@ angular.module('osm.controllers').controller('RelationsTableController',
     }]
 );
 
-
-angular.module('osm.controllers').controller('RelationController',
-    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
-        console.log('init RelationController');
-        $scope.settings = settingsService.settings;
-        $scope.relationID = $routeParams.relationid;
-        $scope.members = [];
-        $scope.tags = [];
-        $scope.markers = {};
-        $scope.displayedMember = 0;
-        $scope.currentNode = '';
-        $scope.loading = {};
-        $scope.setCurrentRelation = function(member){
-            if (member.type === 'relation'){
-                $location.path('/relation/'+member.ref);
-            }
-        };
-        var moveMember = function(from, to) {
-            $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
-            $scope.relationGeoJSON.features.splice(to, 0, $scope.relationGeoJSON.features.splice(from, 1)[0]);
-        };
-        $scope.moveMemberUp = function(member){
-            var index = $scope.members.indexOf(member);
-            moveMember(index, index-1);
-        };
-        $scope.moveMemberDown = function(member){
-            var index = $scope.members.indexOf(member);
-            moveMember(index, index+1);
-        };
-        $scope.removeMemberFromRelation = function(member){
-            var index = $scope.members.indexOf(member);
-            $scope.members.splice(index, 1);
-            $scope.relationGeoJSON.features.splice(index, 1);
-            leafletService.addGeoJSONLayer(
-                'relation',
-                $scope.relationGeoJSON,
-                $scope.relationGeoJSON.options
-            );
-        };
-        var cache = {};
-        var getRelationFeatureById = function(id){
-            if (cache.source !== $scope.relationGeoJSON){
-                var tmp;
-                for (var i = 0; i < $scope.relationGeoJSON.features.length; i++) {
-                    tmp = $scope.relationGeoJSON.features[i];
-                    cache[tmp.id] = tmp;
-                }
-            }
-            if (typeof id === 'string'){
-                return cache[parseInt(id, 10)];
-            }
-            return cache[id];
-        };
-        var startIcon = {
-            iconUrl: 'images/marker-start.png',
-            shadowUrl: 'images/marker-shadow.png',
-            iconSize:     [15, 21], // size of the icon
-            shadowSize:   [20, 30], // size of the shadow
-            iconAnchor:   [15, 21], // point of the icon which will correspond to marker's location
-            shadowAnchor: [4, 30],  // the same for the shadow
-            popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
-        };
-        var endIcon = {
-            iconUrl: 'images/marker-start.png',
-            shadowUrl: 'images/marker-shadow.png',
-            iconSize:     [15, 21], // size of the icon
-            shadowSize:   [20, 30], // size of the shadow
-            iconAnchor:   [15, 21], // point of the icon which will correspond to marker's location
-            shadowAnchor: [4, 30],  // the same for the shadow
-            popupAnchor:  [-3, -20] // point from which the popup should open relative to the iconAnchor
-        };
-        $scope.displayMember = function(member){
-            $scope.displayedMember = member.ref;
-            $scope.currentMember = getRelationFeatureById(member.ref);
-            var c = $scope.currentMember.geometry.coordinates;
-            if ($scope.currentMember.geometry.type === 'LineString'){
-                $scope.markers = {
-                    start: {
-                        id: undefined,
-                        icon: startIcon,
-                        lng: c[0][0],
-                        lat: c[0][1],
-                        focus: true,
-                        draggable: false
-                    },
-                    end: {
-                        id: undefined,
-                        icon: endIcon,
-                        lng: c[c.length-1][0],
-                        lat: c[c.length-1][1],
-                        focus: false,
-                        draggable: false
-                    }
-                };
-                leafletService.getMap().then(function(map){
-                    map.fitBounds(L.latLngBounds(
-                        L.latLng(c[0][1], c[0][0]),
-                        L.latLng(c[c.length-1][1], c[c.length-1][0])
-                    ));
-                });
-            }else if($scope.currentMember.geometry.type === 'Point'){
-                $scope.markers = {
-                    start: {
-                        id: undefined,
-                        icon: startIcon,
-                        lng: c[0],
-                        lat: c[1],
-                        focus: true,
-                        draggable: false
-                    }
-                };
-                leafletService.getMap().then(function(map){
-                    var zoom = map.getZoom();
-                    if (zoom < 15){
-                        zoom = 16;
-                    }
-                    map.setView(L.latLng(c[1], c[0]), zoom);
-                });
-            }
-        };
-        var onEachFeature = function(feature, layer) {
-            layer.on('click', function () {
-                $scope.currentMember = feature;
-                $scope.displayedMember = feature.id;
-            });
-            if (feature.properties){
-                var html = '<ul>';
-                for (var propertyName in feature.properties) {
-                    html += '<li>'+ propertyName + ' : ' + feature.properties[propertyName] + '</li>';
-                }
-                html += '</ul>';
-                layer.bindPopup(html);
-            }
-        };
-        $scope.loading.saving = false;
-        $scope.loading.savingsuccess = false;
-        $scope.loading.savingerror = false;
-        $scope.saveRelation = function(){
-            $scope.loading.saving = true;
-            $scope.loading.savingsuccess = false;
-            $scope.loading.savingerror = false;
-            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relationGeoJSON);
-            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
-                .then(function(data){
-                    $scope.relationGeoJSON.properties.version = data;
-                    $scope.loading.saving = false;
-                    $scope.loading.savingsuccess = true;
-                    $scope.loading.savingerror = false;
-                }, function(){
-                    $scope.loading.saving = false;
-                    $scope.loading.savingsuccess = false;
-                    $scope.loading.savingerror = true;
-                }
-            );
-        };
-        $scope.sortRelationMembers = function(){
-            osmService.sortRelationMembers($scope.relationGeoJSON);
-            $scope.members = $scope.relationGeoJSON.members;
-        };
-        //pagination
-        $scope.start = 0;
-        var bsize = 10;
-        $scope.end = $scope.start + bsize;
-        $scope.batchMembers = true;
-        $scope.toggleBatchMembers = function(){
-            if (bsize === $scope.members.length){
-                bsize = 10;
-                $scope.end = $scope.start + bsize;
-            }else{
-                bsize = $scope.members.length;
-                $scope.start = 0;
-                $scope.end = bsize;
-            }
-        };
-        $scope.displayPreviousMembers = function(){
-            $scope.end = $scope.start;
-            $scope.start = $scope.start - bsize;
-        };
-        $scope.displayNextMembers = function(){
-            $scope.start = $scope.end;
-            $scope.end += bsize;
-        };
-        $scope.hasNextMembers = function(){
-            return $scope.end < $scope.members.length;
-        };
-        $scope.hasPreviousMembers = function(){
-            return $scope.start !== 0;
-        };
-        $scope.moveMemberFromIndexToIndex = function(oldIndex, newIndex){
-            if (isNaN(oldIndex) || isNaN(newIndex)){
-                return;
-            }
-            var member = $scope.members.splice(oldIndex, 1)[0];
-            $scope.members.splice(newIndex, 0, member);
-        };
-        $scope.addRelationToHistory = function(){
-            var found = false;
-            for (var i = 0; i < $scope.settings.history.length; i++) {
-                if ($scope.settings.history[i].ref === $scope.relationID){
-                    found = true;
-                }
-            }
-            if (!found){
-                $scope.settings.history.push({
-                    ref:$scope.relationID,
-                    name:$scope.relationName
-                });
-            }
-        };
-        var isFitWith = function(c1, c2){
-            var cc,i,j;
-            for (i = 0; i < c1.length; i++) {
-                cc = c1[i];
-                for (j = 0; j < c2.length; j++) {
-                    if (cc[0] === c2[j][0] && cc[1] === c2[j][1]){
-                        return true;
-                    }
-                }
-            }
-        };
-        $scope.fitWithSibling = function(member){
-            var index = $scope.members.indexOf(member);
-            var current = $scope.relationGeoJSON.features[index];
-            if (current.geometry.type === 'Point'){
-                return true; //not supported
-            }
-            var previous,next;
-            var fitWithPrevious, fitWithNext;
-            if (index > 0){
-                previous = $scope.relationGeoJSON.features[index - 1];
-                if (previous.geometry.type !== 'LineString'){
-                    return false;
-                }
-                fitWithPrevious = isFitWith(
-                    current.geometry.coordinates,
-                    previous.geometry.coordinates
-                );
-            }else{
-                fitWithPrevious = true;
-            }
-            if (index < $scope.members.length - 1){
-                next = $scope.relationGeoJSON.features[index + 1];
-                if (next.geometry.type !== 'LineString'){
-                    return false;
-                }
-                fitWithNext = isFitWith(
-                    current.geometry.coordinates,
-                    next.geometry.coordinates
-                );
-            }else{
-                fitWithNext = true;
-            }
-            return fitWithNext && fitWithPrevious;
-        };
-        $scope.initialize = function(){
-            $scope.loggedin = $scope.settings.credentials;
-            if ($scope.relationID === undefined){
-                return;
-            }
-            /*only for debug purpose
-            osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
-                $scope.relationDOM = data;
-                $scope.relationXML = osmService.serialiseXmlToString(data);
-            }, function(error){
-                console.error(error);
-            });*/
-            $scope.loading.relation = true;
-            $scope.loading.relationsuccess = false;
-            $scope.loading.relationerror = false;
-            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
-                function(data){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = true;
-                    $scope.loading.relationerror = false;
-                    $scope.relationXMLFull = osmService.serialiseXmlToString(data);
-                    $scope.relationGeoJSON = osmService.relationXmlToGeoJSON($scope.relationID, data);
-                    $scope.members = $scope.relationGeoJSON.members;
-                    $scope.tags = $scope.relationGeoJSON.tags;
-                    for (var i = 0; i < $scope.relationGeoJSON.tags.length; i++) {
-                        if ($scope.relationGeoJSON.tags[i].k === 'name'){
-                            $scope.relationName = $scope.relationGeoJSON.tags[i].v;
-                            break;
-                        }
-                    }
-                    $scope.addRelationToHistory();
-                    $scope.relationGeoJSON.options.onEachFeature = onEachFeature;
-                    leafletService.addGeoJSONLayer(
-                        'relation',
-                        $scope.relationGeoJSON,
-                        $scope.relationGeoJSON.options
-                    );
-                }, function(error){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = false;
-                    $scope.loading.relationerror = true;
-                    console.error(error);
-                }
-            );
-        };
-        $scope.initialize();
-    }]
-);
 angular.module('osm.controllers').controller('RelationSearchController',
     ['$scope', '$q', 'osmService', 'leafletService',
     function($scope, $q, osmService, leafletService){
@@ -1484,24 +1589,37 @@ angular.module('osm.controllers').controller('RelationSearchController',
     }]
 );
 
-angular.module('osm.controllers').controller('ParentsRelationsController',
-    ['$scope', '$routeParams', 'osmService',
-    function($scope, $routeParams, osmService){
-        $scope.parents = [];
-        if ($routeParams.relationid === undefined){
-            return;
-        }
-        osmService.get('/0.6/relation/' + $routeParams.relationid + '/relations')
-            .then(function(data){
-                var relations = data.getElementsByTagName('relation');
-                for (var i = 0; i < relations.length; i++) {
-                    $scope.parents.push({
-                        type: 'relation',
-                        ref: relations[i].getAttribute('id'),
-                        name: osmService.getNameFromTags(relations[i])
-                    });
+/*jshint strict:false */
+/*global angular:false */
+
+angular.module('osm.controllers').controller('SaveRelationController',
+    ['$scope', '$routeParams', 'settingsService', 'osmService',
+    function($scope, $routeParams, settingsService, osmService){
+        $scope.relationID = $routeParams.lineRelationId ||
+        $routeParams.masterRelationId ||
+            $routeParams.mainRelationId;
+        $scope.loading.saving = false;
+        $scope.loading.savingsuccess = false;
+        $scope.loading.savingerror = false;
+        $scope.saveRelation = function(){
+            $scope.loading.saving = true;
+            $scope.loading.savingsuccess = false;
+            $scope.loading.savingerror = false;
+            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relation);
+/*            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+                .then(function(data){
+                    $scope.relation.properties.version = data;
+                    $scope.loading.saving = false;
+                    $scope.loading.savingsuccess = true;
+                    $scope.loading.savingerror = false;
+                }, function(){
+                    $scope.loading.saving = false;
+                    $scope.loading.savingsuccess = false;
+                    $scope.loading.savingerror = true;
                 }
-            }, function(){});
+            );
+*/
+        };
     }]
 );
 /*jshint strict:false */
