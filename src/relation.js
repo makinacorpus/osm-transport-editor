@@ -34,6 +34,13 @@ angular.module('osm').directive('tagsTable', function(){
         }
     };
 });
+angular.module('osm').directive('moveMembers', function(){
+    return {
+        restrict: 'A',
+        replace: true,
+        templateUrl: 'partials/moveMembers.html',
+    };
+});
 
 angular.module('osm.controllers').controller('RelationsTableController',
     ['$scope', '$routeParams', '$location', 'osmService',

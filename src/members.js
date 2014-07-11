@@ -43,12 +43,17 @@ angular.module('osm.controllers').controller('MembersController',
         $scope.removeMemberFromRelation = function(member){
             var index = getIndex(member);
             $scope.members.splice(index, 1);
-            $scope.relation.features.splice(index, 1);
-            leafletService.addGeoJSONLayer(
-                'relation',
-                $scope.relation,
-                $scope.relation.options
-            );
+            if (member.type !== 'relation'){
+                $scope.relation.features.splice(index, 1);
+                leafletService.addGeoJSONLayer(
+                    'relation',
+                    $scope.relation,
+                    $scope.relation.options
+                );
+            }else{
+                index = $scope.relation.relations.indexOf(member);
+                $scope.relation.relations.splice(index, 1);
+            }
         };
         $scope.moveMemberFromIndexToIndex = function(oldIndex, newIndex){
             if (isNaN(oldIndex) || isNaN(newIndex)){
@@ -56,8 +61,13 @@ angular.module('osm.controllers').controller('MembersController',
             }
             var member = $scope.members.splice(oldIndex, 1)[0];
             $scope.members.splice(newIndex, 0, member);
-            var feature = $scope.relation.features.splice(oldIndex, 1)[0];
-            $scope.relation.features.splice(newIndex, 0, feature);
+            if (member.type !== 'relation'){
+                var feature = $scope.relation.features.splice(oldIndex, 1)[0];
+                $scope.relation.features.splice(newIndex, 0, feature);
+            }else{
+                var relation = $scope.relation.relations.splice(oldIndex, 1)[0];
+                $scope.relation.relations.splice(newIndex, 0, relation);
+            }
         };
     }]
 );
