@@ -446,7 +446,7 @@ angular.module('osm.services').factory('osmService',
                             features.push(feature);
                         }else if (memberElement.tagName === 'relation'){
                             relations.push({
-                                properties: properties,
+                                tags: properties,
                                 type:'relation',
                                 ref: m.getAttribute('ref'),
                                 id: m.getAttribute('ref'),
@@ -455,7 +455,7 @@ angular.module('osm.services').factory('osmService',
                         }
                     }
                 }
-                result.properties = self.getTagsFromChildren(relation);
+                result.tags = self.getTagsFromChildren(relation);
                 if (result.properties.colour !== undefined){
                     result.options.color = result.properties.colour;
                 }
@@ -463,7 +463,6 @@ angular.module('osm.services').factory('osmService',
             },
             relationGeoJSONToXml: function(relationGeoJSON){
                 var i;
-                //BROKEN
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
                 var settings = settingsService.settings;
@@ -479,7 +478,7 @@ angular.module('osm.services').factory('osmService',
                     output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
                 }
 
-                var tags = relationGeoJSON.properties;
+                var tags = relationGeoJSON.tags;
                 for (var k in tags) {
                     output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
                 }
