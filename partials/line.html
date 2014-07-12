@@ -1,4 +1,4 @@
-<div id="maps-wrapper" class="row">
+<div id="maps-wrapper" class="row" ng-controller="MembersController">
   <div class="col-md-6">
     <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
     <alert type="'danger'" ng-show="loading.relationerror">
@@ -37,7 +37,7 @@
                   Display All / batch
               </button>
             </div>
-            <table class="table table-bordered" ng-controller="MembersController">
+            <table class="table table-bordered">
               <tr>
                 <th>[index]</th>
                 <th>type</th>
@@ -103,32 +103,23 @@
         </tabset>
       </div>
     </div>
-    <div class="panel panel-default" ng-controller="RelationSearchController">
-      <div class="panel-heading">Search for relations (overpass)</div>
-      <div class="panel-body">
-        <div class="input-group margin-bottom-sm" ui-keypress="{13:'search()'}">
-          <input type="search" class="form-control" ng-model="pattern" placeholder="relation pattern"/>
-          <span class="input-group-addon">
-            <i class="fa fa-refresh fa-spin" ng-show="loading.relations"></i>
-            <i class="fa fa-check fa-fw text-success" ng-show="loading.relationssuccess"></i>
-            <i class="fa fa-times fa-fw text-danger" ng-show="loading.relationserror"></i>
-          </span>
-        </div>
-        <div relations-table relations="relations"></div>
-      </div>
-    </div>
-
   </div>
   <div class="col-md-6" ng-controller="LeafletController">
-
-    <div ng-include="'./partials/settings.html'"></div>
 
     <leaflet center="center" markers="markers" layers="layers" width="100%" height="500" geojson="leafletGeojson"></leaflet>
     <div class="panel panel-default ng-hide" ng-show="relation">
       <div class="panel-heading">
         <div class="btn-group">
-          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassWays()" translate>display ways</a>
-          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassBusStop()" translate>display bus stop</a>
+          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassWays()" translate>display ways
+            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.ways"></i>
+            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.waysOK"></i>
+            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.waysKO"></i>
+          </a>
+          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassBusStop()" translate>display bus stop
+            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.busstop"></i>
+            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.busstopOK"></i>
+            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.busstopKO"></i>
+          </a>
           <a class="btn btn-danger" ng-show="overpassLayer" ng-click="removeOverpassLayer()">hide items</a>
         </div>
         <a target="_blank" ng-href="http://www.openstreetmap.org/edit#map={{center.zoom}}/{{center.lat}}/{{center.lng}}" translate class="pull-right">iD</a>
@@ -173,7 +164,7 @@
             </th>
           </tr>
           <tr ng-repeat="geojson in settings.geojsonLayers">
-            <td><a href="{{geojson}}" target="_blank">{{geojson}}</a></td>
+            <td><a ng-href="{{geojson}}" target="_blank">{{geojson}}</a></td>
             <td>
               <div class="btn-group">
                 <button class="btn btn-danger" ng-click="removeGeoJSON(geojson)">delete

@@ -1,5 +1,9 @@
 <div class="row ng-hide" ng-show="relation">
 	<div class="col-md-7">
+	    <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
+	    <alert type="'danger'" ng-show="loading.relationerror">
+	      A problem occurs during the loading of the relation.
+	    </alert>
 	    <ol class="breadcrumb">
 	      <li><a ng-href="/#/{{mainRelationId}}">Network</a></li>
 	      <li class="active">{{relation.tags.name}}</li>
@@ -62,7 +66,6 @@
 		</div>
 	</div>
 	<div class="col-md-5">
-	    <div ng-include="'./partials/settings.html'"></div>
 		<div class="panel panel-default">
 			<div class="panel-heading">Tags</div>
 			<div class="panel-body">
