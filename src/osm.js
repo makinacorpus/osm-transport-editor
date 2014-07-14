@@ -445,13 +445,7 @@ angular.module('osm.services').factory('osmService',
                             };
                             features.push(feature);
                         }else if (memberElement.tagName === 'relation'){
-                            relations.push({
-                                tags: properties,
-                                type:'relation',
-                                ref: m.getAttribute('ref'),
-                                id: m.getAttribute('ref'),
-                                role: m.getAttribute('role')
-                            });
+                            member.tags = properties;
                         }
                     }
                 }
@@ -475,7 +469,13 @@ angular.module('osm.services').factory('osmService',
 
                 for (i = 0; i < members.length; i++) {
                     output += '    <member type="'+ members[i].type +'" ';
-                    output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
+                    output += 'ref="'+members[i].ref;
+                    //role depends on the type of member
+                    if (members[i].type === 'relation'){
+                        output += '" role="'+ members[i].role+'"/>\n';
+                    }else{
+                        output += '" role="'+ members[i].role+'"/>\n';
+                    }
                 }
 
                 var tags = relationGeoJSON.tags;

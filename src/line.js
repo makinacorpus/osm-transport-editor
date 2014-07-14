@@ -172,7 +172,7 @@ angular.module('osm.controllers').controller('LineRelationController',
             if (index > 0){
                 previous = $scope.relation.features[index - 1];
                 if (previous.geometry.type !== 'LineString'){
-                    return false;
+                    return true;
                 }
                 fitWithPrevious = isFitWith(
                     current.geometry.coordinates,

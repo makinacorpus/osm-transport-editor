@@ -50,7 +50,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.saving = true;
             $scope.loading.savingsuccess = false;
             $scope.loading.savingerror = false;
-            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relation);
+            $scope.relationXMLOutput = $scope.getRelationXML();
             console.log($scope.relationXMLOutput);
             osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
@@ -64,7 +64,12 @@ angular.module('osm.controllers').controller('SaveRelationController',
                     $scope.loading.savingerror = true;
                 }
             );
-
+        };
+        $scope.getRelationXML = function(){
+            return osmService.relationGeoJSONToXml($scope.relation);
+        };
+        $scope.debug = function(){
+            $scope.relationXMLOutput = $scope.getRelationXML();
         };
     }]
 );
