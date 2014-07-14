@@ -1,0 +1,16 @@
+<div ng-controller="DebugController">
+  <button class="btn bnt-default btn-xs" ng-click="toggleDebugPanel()">debug</button>
+  <div class="panel panel-default ng-hide" ng-show="displayDebugPanel">
+    <div class="panel-heading">DEBUG</div>
+    <div class="panel-body">
+      <tabset>
+        <tab heading="save">
+          <div ng-controller="SaveRelationController">
+            <button class="btn btn-default" ng-click="debug()">Show data ready to be put to osm</button>
+            <pre>{{relationXMLOutput}}</pre>
+          </div>
+        </tab>
+      </tabset>
+    </div>
+  </div>
+</div>

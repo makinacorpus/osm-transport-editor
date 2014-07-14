@@ -30,28 +30,31 @@
 						<th>Role</th>
 						<th class="ng-hide" ng-show="loggedin">Actions</th>
 					</tr>
-					<tr ng-repeat="member in relation.relations">
+					<tr ng-repeat="member in relation.members">
 						<td>
 							<i class="fa fa-wheelchair ng-hide" ng-show="member.tags.wheelchair"></i>
+							<i class="fa fa-warning ng-hide" ng-show="member.type !== 'relation'"></i>
 						</td>
 						<td style="background-color: {{member.tags.colour}}">
 							<span style="color: {{member.tags.text_colour}}">{{member.tags.ref}}</span>
+							<span class="ng-hide" ng-show="member.type !== 'relation'">{{member.ref}}</span>
 						</td>
 						<td>
-							<a ng-href="#{{mainRelationId}}/{{masterRelationId}}/{{member.id}}">{{member.tags.name}}</a>
+							<a ng-href="#{{mainRelationId}}/{{masterRelationId}}/{{member.ref}}">{{member.tags.name}}</a>
+							<a ng-href="http://openstreetmap.org/{{member.type}}/{{member.ref}}" class="ng-hide" ng-show="member.type !== 'relation'">{{member.name}}</a>
 						</td>
 						<td>
 							<div class="form-group ng-hide" ng-show="!loggedin">{{member.role}}</div>
 							<div class="form-group ng-hide" ng-show="loggedin">
-								<input type="text" class="form-control" ng-model="member.role"/>
+								<input type="text" class="form-control input-sm" ng-model="member.role"/>
 							</div>
 						</td>
 						<td class="ng-hide" ng-show="loggedin">
 							<div class="btn-group">
-			                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+			                    <button ng-disabled="$index === 0" class="btn btn-default" ng-click="moveMemberUp(member)">
 			                      <i class="fa fa-arrow-circle-o-up"></i>
 			                    </button>
-			                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+			                    <button ng-disabled="$index === members.length-1" class="btn btn-default" ng-click="moveMemberDown(member)">
 			                      <i class="fa fa-arrow-circle-o-down"></i>
 			                    </button>
 								<div open-relation-ext relation-id="member.ref"></div>
@@ -64,6 +67,8 @@
 				</table>
 			</div>
 		</div>
+	    <div ng-include="'partials/debug.html'"></div>
+
 	</div>
 	<div class="col-md-5">
 		<div class="panel panel-default">

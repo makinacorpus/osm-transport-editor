@@ -39,17 +39,14 @@
             </div>
             <table class="table table-bordered">
               <tr>
-                <th>[index]</th>
                 <th>type</th>
                 <th>ref</th>
+                <th>role</th>
                 <th class="ng-hide" ng-show="loggedin">actions</th>
               </tr>
               <tr ng-repeat="member in members | filter:q | slice:start:end">
                 <td>
-                  <i class="fa fa-warning ng-hide" ng-show="!fitWithSibling(member)"></i>[{{members.indexOf(member)}}]
-                </td>
-                <td>
-                  {{member.type}}
+                  <i class="fa fa-warning ng-hide" ng-show="!fitWithSibling(member)"></i>{{member.type}}
                 </td>
                 <td>
                   <div ng-if="member.type === 'relation'">
@@ -59,8 +56,15 @@
                     <a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}}</a>
                   </div>
                 </td>
+                <td>
+                  <div class="form-group ng-hide" ng-show="!loggedin">{{member.role}}</div>
+                  <div class="form-group ng-hide" ng-show="loggedin">
+                    <input type="text" class="form-control input-sm" ng-model="member.role"/>
+                  </div>
+                </td>
                 <td class="ng-hide" ng-show="loggedin">
                   <div class="btn-group">
+                    <button class="btn btn-default" disabled>[{{members.indexOf(member)}}]</button>
                     <button class="btn btn-default" ng-click="setCurrentRelation(member)" ng-show="member.type === 'relation'">
                       <i class="fa fa-pencil"></i>
                     </button>
@@ -68,10 +72,10 @@
                       <i ng-class="{fa: 1, 'fa-map-marker': member.type === 'node', 'fa-road': member.type === 'way' }"></i>
                     </button>
 
-                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+                    <button ng-disabled="members.indexOf(member) === 0" class="btn btn-default" ng-click="moveMemberUp(member)">
                       <i class="fa fa-arrow-circle-o-up"></i>
                     </button>
-                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+                    <button ng-disabled="members.indexOf(member) === members.length-1" class="btn btn-default" ng-click="moveMemberDown(member)">
                       <i class="fa fa-arrow-circle-o-down"></i>
                     </button>
                     <div class="ng-hide" ng-show="member.type === 'relation'">
@@ -180,26 +184,6 @@
     </div>
 
     <br/>
-    <div class="panel panel-default ng-hide">
-      <div class="panel-heading">DEBUG</div>
-      <div class="panel-body">
-        <tabset>
-          <tab heading="relation (xml)">
-            <pre>{{relationXML}}</pre>
-          </tab>
-          <tab heading="relation full (xml)">
-            <pre>{{relationXMLFull}}</pre>
-          </tab>
-          <tab heading="relation output (xml)">
-            <pre>{{relationXMLOutput}}</pre>
-          </tab>
-          <tab heading="currentNode">
-            <p>For debug purpose</p>
-            <pre>{{currentNode}}</pre>
-          </tab>
-        </tabset>
-      </div>
-    </div>
   </div>
 
 </div>

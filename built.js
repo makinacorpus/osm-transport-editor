@@ -26,6 +26,17 @@ angular.module('osm.directives', []);
 
 /*jshint strict:false */
 /*global angular:false */
+
+angular.module('osm.controllers').controller('DebugController',
+	['$scope', function($scope){
+		$scope.displayDebugPanel = false;
+		$scope.toggleDebugPanel = function(){
+			$scope.displayDebugPanel = !$scope.displayDebugPanel;
+		}
+	}]
+);
+/*jshint strict:false */
+/*global angular:false */
 /*global L:false */
 L.Icon.Default.imagePath = 'images/';
 
@@ -528,7 +539,7 @@ angular.module('osm.controllers').controller('LineRelationController',
             if (index > 0){
                 previous = $scope.relation.features[index - 1];
                 if (previous.geometry.type !== 'LineString'){
-                    return false;
+                    return true;
                 }
                 fitWithPrevious = isFitWith(
                     current.geometry.coordinates,
@@ -1257,13 +1268,7 @@ angular.module('osm.services').factory('osmService',
                             };
                             features.push(feature);
                         }else if (memberElement.tagName === 'relation'){
-                            relations.push({
-                                tags: properties,
-                                type:'relation',
-                                ref: m.getAttribute('ref'),
-                                id: m.getAttribute('ref'),
-                                role: m.getAttribute('role')
-                            });
+                            member.tags = properties;
                         }
                     }
                 }
@@ -1287,7 +1292,13 @@ angular.module('osm.services').factory('osmService',
 
                 for (i = 0; i < members.length; i++) {
                     output += '    <member type="'+ members[i].type +'" ';
-                    output += 'ref="'+members[i].ref +'" role="'+ members[i].role+'"/>\n';
+                    output += 'ref="'+members[i].ref;
+                    //role depends on the type of member
+                    if (members[i].type === 'relation'){
+                        output += '" role="'+ members[i].role+'"/>\n';
+                    }else{
+                        output += '" role="'+ members[i].role+'"/>\n';
+                    }
                 }
 
                 var tags = relationGeoJSON.tags;
@@ -1545,7 +1556,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.saving = true;
             $scope.loading.savingsuccess = false;
             $scope.loading.savingerror = false;
-            $scope.relationXMLOutput = osmService.relationGeoJSONToXml($scope.relation);
+            $scope.relationXMLOutput = $scope.getRelationXML();
             console.log($scope.relationXMLOutput);
             osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
@@ -1559,7 +1570,12 @@ angular.module('osm.controllers').controller('SaveRelationController',
                     $scope.loading.savingerror = true;
                 }
             );
-
+        };
+        $scope.getRelationXML = function(){
+            return osmService.relationGeoJSONToXml($scope.relation);
+        };
+        $scope.debug = function(){
+            $scope.relationXMLOutput = $scope.getRelationXML();
         };
     }]
 );

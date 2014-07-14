@@ -27,7 +27,7 @@
 						<th>Name</th>
 						<th class="ng-hide" ng-show="loggedin">Actions</th>
 					</tr>
-					<tr ng-repeat="member in relation.relations">
+					<tr ng-repeat="member in relation.members">
 						<td>
 							<i class="fa fa-wheelchair ng-hide" ng-show="member.tags.wheelchair"></i>
 						</td>
@@ -35,15 +35,15 @@
 							<span style="color: {{member.tags.text_colour}}">{{member.tags.ref}}</span>
 						</td>
 						<td>
-							<a ng-href="#{{relationID}}/{{member.id}}">{{member.tags.name}}</a>
+							<a ng-href="#{{relationID}}/{{member.ref}}">{{member.tags.name}}</a>
 						</td>
 						<td class="ng-hide" ng-show="loggedin">
 							<div class="btn-group">
 								<button disabled class="btn btn-default">[{{$index}}]</button>
-			                    <button ng-disabled="$first" class="btn btn-default" ng-click="moveMemberUp(member)">
+			                    <button ng-disabled="$index === 0" class="btn btn-default" ng-click="moveMemberUp(member)">
 			                      <i class="fa fa-arrow-circle-o-up"></i>
 			                    </button>
-			                    <button ng-disabled="$last" class="btn btn-default" ng-click="moveMemberDown(member)">
+			                    <button ng-disabled="$index === members.length-1" class="btn btn-default" ng-click="moveMemberDown(member)">
 			                      <i class="fa fa-arrow-circle-o-down"></i>
 			                    </button>
 			                    <div open-relation-ext relation-id="member.ref"></div>
