@@ -1,9 +1,10 @@
-<div class="row ng-hide" ng-show="relation">
+<div class="row">
 	<div class="col-md-7">
-    <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
-    <alert type="'danger'" ng-show="loading.relationerror">
-      A problem occurs during the loading of the relation.
-    </alert>
+		<div class="ng-hide" ng-show="relation">
+	    <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
+	    <alert type="'danger'" ng-show="loading.relationerror">
+	      A problem occurs during the loading of the relation.
+	    </alert>
 		<h1 ng-show="relation">Network: {{relation.tags.name}}
 			<a ng-href="{{relation.tags.url}}" target="_blank" class="ng-hide" ng-show="relation.tags.url"><i class="fa fa-external-link"></i></a>
 		</h1>
@@ -57,14 +58,53 @@
 				<div class="ng-hide" ng-show="loggedin" move-members members="relation.relations"></div>
 			</div>
 		</div>
+		</div>
 	</div>
 	<div class="col-md-5">
-		<div class="panel panel-default">
+		<div class="panel panel-default ng-hide" ng-show="relation">
 			<div class="panel-heading">Tags</div>
 			<div class="panel-body">
 				<div tags-table tags="relation.tags"></div>
 			</div>
 		</div>
-		<div search-relations></div>
 	</div>
+</div>
+<div class="row" ng-controller="RelationSearchController">
+  <div class="col-md-7">
+<div class="panel panel-default">
+  <div class="panel-heading">Search for relations (overpass)</div>
+  <div class="panel-body" ui-keypress="{13:'search()'}">
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" class="form-control" ng-model="name"/>
+    </div>
+    <div class="form-group">
+      <label>Network</label>
+      <input type="text" class="form-control" ng-model="network"/>
+    </div>
+    <div class="checkbox">
+      <label>
+        <input type="checkbox" ng-model="bbox"/> bbox
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Operator</label>
+      <p class="help-block">The name of the company responsible of the searched network</p>
+      <input type="text" class="form-control" ng-model="operator"/>
+    </div>
+    <button class="btn btn-primary" ng-click="search()">Search
+        <i class="fa fa-search" ng-show="!loading.relations"></i>
+        <i class="fa fa-refresh fa-spin" ng-show="loading.relations"></i>
+        <i class="fa fa-check fa-fw text-success" ng-show="loading.relationssuccess"></i>
+        <i class="fa fa-times fa-fw text-danger" ng-show="loading.relationserror"></i>
+    </button>
+    <div relations-table relations="relations"></div>
+  </div>
+</div>
+  </div>
+  <div class="col-md-5">
+    <div ng-if="bbox">
+      <leaflet height="350" width="100%"></leaflet>
+    </div>
+  </div>
 </div>

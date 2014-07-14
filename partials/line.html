@@ -100,6 +100,11 @@
               </button>
             </div>
             <div move-members members="members"></div>
+            <div class="btn-group">
+              <button class="btn btn-default" ng-click="reverse()">Reverse everything</button>
+              <button class="btn btn-default" ng-click="reverse('ways')">Reverse ways</button>
+              <button class="btn btn-default" ng-click="reverse('nodes')">Reverse nodes</button>
+            </div>
           </tab>
           <tab heading="tags {{howManyTags}}">
             <table tags-table tags="relation.tags"></table>
