@@ -26,9 +26,10 @@ angular.module('osm').directive('openRelationExt', function(){
 angular.module('osm.controllers').controller('RelationsTableController',
     ['$scope', '$location', function($scope, $location){
         console.log('init RelationsTableController');
+
         $scope.setCurrentRelation = function(member){
             if (member.type === 'relation'){
-                $location.path('/relation/'+member.ref);
+                $location.path('/'+member.ref);
             }
         };
     }]

@@ -195,6 +195,37 @@ angular.module('osm.controllers').controller('LineRelationController',
             }
             return fitWithNext && fitWithPrevious;
         };
+        $scope.reverse = function(memberType){
+            var isWay = function(element){
+                if (element.geometry){
+                    return element.geometry.type === 'LineString';
+                }else{
+                    return element.type === 'way';
+                }
+            };
+            var isNode = function(element){
+                if (element.geometry){
+                    return element.geometry.type === 'Point';
+                }else{
+                    return element.type === 'node';
+                }
+            };
+            var ways = $scope.members.filter(isWay);
+            var fways = $scope.relation.features.filter(isWay);
+            var nodes = $scope.members.filter(isNode);
+            var fnodes = $scope.relation.features.filter(isNode);
+            if (memberType === 'ways' || memberType === undefined){
+                ways.reverse();
+                fways.reverse();
+            }
+            if (memberType === 'node' || memberType === undefined){
+                nodes.reverse();
+                fnodes.reverse();
+            }
+            $scope.members = ways.concat(nodes);
+            $scope.features = fways.concat(fnodes);
+            //how could I sync geojson ?
+        };
         $scope.initialize = function(){
             $scope.loggedin = $scope.settings.credentials;
             if ($scope.relationID === undefined){

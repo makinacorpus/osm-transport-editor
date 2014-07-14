@@ -139,9 +139,11 @@ angular.module('osm.services').factory('osmService',
             overpassToGeoJSON: function(query, filter){
                 var deferred = $q.defer();
                 var features = [];
+                var relations = [];
                 var result = {
                     type: 'FeatureCollection',
-                    features:features
+                    features: features,
+                    relations: relations
                 };
                 this.overpass(query).then(function(data){
                     //TODO check if data is XML or JSON, here it's JSON
@@ -192,6 +194,13 @@ angular.module('osm.services').factory('osmService',
                             if (!filter(feature)){
                                 features.push(feature);
                             }
+                        }else if (node.type === 'relation'){
+                            result.relations.push({
+                                ref: node.id,
+                                tags: node.tags,
+                                type: 'relation',
+                                members: node.members
+                            });
                         }
                     }
                     deferred.resolve(result);

@@ -189,7 +189,7 @@ angular.module('osm.controllers').controller('LeafletController',
                     return feature.geometry.type !== 'Point';
                 };
                 var query = '<?xml version="1.0" encoding="UTF-8"?>';
-                query += '<osm-script output="json" timeout="25"><union>';
+                query += '<osm-script output="json" timeout="10"><union>';
                 query += '<query type="node">';
                 query += '<has-kv k="highway" v="bus_stop"/>';
                 query += '<bbox-query ' + bbox + '/>';
