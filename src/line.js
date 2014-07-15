@@ -231,13 +231,6 @@ angular.module('osm.controllers').controller('LineRelationController',
             if ($scope.relationID === undefined){
                 return;
             }
-            /*only for debug purpose
-            osmService.get('/0.6/relation/' + $scope.relationID).then(function(data){
-                $scope.relationDOM = data;
-                $scope.relationXML = osmService.serialiseXmlToString(data);
-            }, function(error){
-                console.error(error);
-            });*/
             $scope.loading.relation = true;
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;

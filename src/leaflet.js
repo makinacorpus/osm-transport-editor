@@ -281,12 +281,21 @@ angular.module('osm.controllers').controller('LeafletController',
         $scope.addNodeToRelation = function(node, newIndex){
             var features = $scope.relation.features;
             features.push($scope.currentNode);
-            $scope.members.push({
-                type: $scope.currentNode.geometry.type === 'LineString' ? 'way' : 'node',
-                ref: $scope.currentNode.id,
-                role: '',
-                name: $scope.currentNode.properties.name
-            });
+            if ($scope.currentNode.geometry.type === 'LineString'){
+                $scope.members.push({
+                    type: 'way',
+                    ref: $scope.currentNode.id,
+                    role: '',
+                    name: $scope.currentNode.properties.name
+                });
+            }else if ($scope.currentNode.geometry.type === 'Point'){
+                $scope.members.push({
+                    type: 'node',
+                    ref: $scope.currentNode.id,
+                    role: 'plateform',
+                    name: $scope.currentNode.properties.name
+                });
+            }
             if (!isNaN(newIndex)){
                 $scope.moveMemberFromIndexToIndex($scope.members.length-1, newIndex);
             }
