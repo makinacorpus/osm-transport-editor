@@ -14,7 +14,7 @@
 			<input class="form-control" type="text" ng-model="tags[k]"/>
 		</div>
     </td>
-    <td>
+    <td class="ng-hide" ng-show="loggedin">
     	<button class="btn btn-danger" ng-click="removeTag(k)"><i class="fa fa-trash-o"></i></button>
     </td>
   </tr>

@@ -1,46 +1,76 @@
-<div class="row">
-	<div class="col-md-7">
-		<div class="ng-hide" ng-show="relation">
+<div class="row" ng-show="showRelationRow">
+	<div class="col-md-6">
 	    <h1 class="ng-hide" ng-show="loading.relation">Loading relation <i class="fa fa-spin fa-refresh"></i></h1>
 	    <alert type="'danger'" ng-show="loading.relationerror">
 	      A problem occurs during the loading of the relation.
 	    </alert>
-		<h1 ng-show="relation">Network: {{relation.tags.name}}
+		<h1 style="background-color: {{relation.tags.colour}};color: {{relation.tags.text_colour}}">{{relation.tags.name}}
 			<a ng-href="{{relation.tags.url}}" target="_blank" class="ng-hide" ng-show="relation.tags.url"><i class="fa fa-external-link"></i></a>
 		</h1>
-        <div class="form-group" style="text-align:right" ng-show="loggedin">
-
+        <div class="form-group" style="text-align:right">
+			<div class="btn-group ng-hide" dropdown ng-show="parents">
+				<button type="button" class="btn btn-default dropdown-toggle">
+			    Parents
+			  	</button>
+			  	<ul class="dropdown-menu" role="menu">
+			    	<li ng-repeat="parent in parents"><a ng-href="#/{{parent.ref}}">{{parent.name}}</a></li>
+				</ul>
+	        </div>
         	<div open-relation-ext relation-id="relationID"></div>
-
-          <button ng-controller="SaveRelationController" class="btn btn-primary" ng-click="saveRelation()">Save
-            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
-            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
-            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
-          </button>
+			<button ng-show="loggedin" ng-controller="SaveRelationController" class="btn btn-primary ng-hide" ng-click="saveRelation()">Save
+				<i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
+				<i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
+				<i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>
+			</button>
 		</div>
-		<div class="panel panel-default">
-			<div class="panel-heading">Lines</div>
+		<div class="panel panel-default ng-hide" ng-show="relation.members">
+			<div class="panel-heading">Members</div>
 			<div class="panel-body">
-				<table class="table" ng-controller="MembersController">
+	            <div class="btn-group pull-right">
+	              <button class="btn btn-default" ng-disabled="!hasPreviousMembers()" ng-click="displayPreviousMembers()">
+	                  <i class="fa fa-angle-left"></i>
+	              </button>
+	              <button class="btn btn-default" ng-disabled="!hasNextMembers()" ng-click="displayNextMembers()">
+	                  <i class="fa fa-angle-right"></i>
+	              </button>
+	              <button class="btn btn-default" ng-click="toggleBatchMembers()">
+	                  Display All / batch
+	              </button>
+	            </div>
+
+				<table class="table table-bordered" ng-controller="MembersController">
 					<tr>
-						<th><i class="fa fa-wheelchair"></i></th>
+						<th>Type</th>
 						<th>Ref</th>
 						<th>Name</th>
-						<th class="ng-hide" ng-show="loggedin">Actions</th>
+						<th>Role</th>
+						<th class="ng-hide" ng-show="loggedin" style="width:33%">Actions</th>
 					</tr>
-					<tr ng-repeat="member in relation.members">
+					<tr ng-repeat="member in relation.members | filter:q | slice:start:end">
 						<td>
 							<i class="fa fa-wheelchair ng-hide" ng-show="member.tags.wheelchair"></i>
+  	                        <i class="fa fa-warning ng-hide" ng-show="!fitWithSibling(member)"></i>
+  	                        <span class="ng-hide" ng-show="member.type !== 'relation'">{{member.type}}</span>
 						</td>
 						<td style="background-color: {{member.tags.colour}}">
-							<span style="color: {{member.tags.text_colour}}">{{member.tags.ref}}</span>
+							<span class="ng-hide" ng-show="member.tags.ref" style="color: {{member.tags.text_colour}}">{{member.tags.ref}}</span>
+							<span class="ng-hide" ng-show="!member.tags.ref"><a target="_blank" href="http://www.openstreetmap.org/{{member.type}}/{{member.ref}}">{{member.ref}}</a></span>
 						</td>
 						<td>
-							<a ng-href="#{{relationID}}/{{member.ref}}">{{member.tags.name}}</a>
+							<a ng-href="#{{member.ref}}">{{member.tags.name}}</a>
 						</td>
+		                <td>
+		                  <div class="form-group ng-hide" ng-show="!loggedin">{{member.role}}</div>
+		                  <div class="form-group ng-hide" ng-show="loggedin">
+		                    <input type="text" class="form-control input-sm" ng-model="member.role"/>
+		                  </div>
+		                </td>
 						<td class="ng-hide" ng-show="loggedin">
 							<div class="btn-group">
-								<button disabled class="btn btn-default">[{{$index}}]</button>
+								<button disabled class="btn btn-default">[{{members.indexOf(member)}}]</button>
+			                    <button  ng-show="member.type !== 'relation'" ng-class="{btn: 1, 'btn-default': member.ref !== displayedMember, 'btn-primary': member.ref === displayedMember}" ng-click="displayMember(member)">
+			                      <i ng-class="{fa: 1, 'fa-map-marker': member.type === 'node', 'fa-road': member.type === 'way' }"></i>
+			                    </button>
 			                    <button ng-disabled="$index === 0" class="btn btn-default" ng-click="moveMemberUp(member)">
 			                      <i class="fa fa-arrow-circle-o-up"></i>
 			                    </button>
@@ -55,56 +85,114 @@
 			              </td>
 					</tr>
 				</table>
-				<div class="ng-hide" ng-show="loggedin" move-members members="relation.relations"></div>
+	            <div class="btn-group pull-right">
+	              <button class="btn btn-default" ng-disabled="!hasPreviousMembers()" ng-click="displayPreviousMembers()">
+	                  <i class="fa fa-angle-left"></i>
+	              </button>
+	              <button class="btn btn-default" ng-disabled="!hasNextMembers()" ng-click="displayNextMembers()">
+	                  <i class="fa fa-angle-right"></i>
+	              </button>
+	              <button class="btn btn-default" ng-click="toggleBatchMembers()">
+	                  Display All / batch
+	              </button>
+	            </div>
+				<div class="ng-hide" ng-show="loggedin">
+		            <div move-members members="members"></div>
+		            <div class="btn-group">
+		              <button class="btn btn-default" ng-click="reverse()">Reverse everything</button>
+		              <button class="btn btn-default" ng-click="reverse('ways')">Reverse ways</button>
+		              <button class="btn btn-default" ng-click="reverse('nodes')">Reverse nodes</button>
+		            </div>
+				</div>
 			</div>
 		</div>
+	</div>
+	<div class="col-md-6">
+		<div class="ng-hide" ng-show="relation.tags">
+			<accordion close-others="oneAtATime">
+			    <accordion-group heading="Tags">
+					<div tags-table tags="relation.tags"></div>
+			    </accordion-group>
+			</accordion>
+		</div>
+		<div>
+		  <div ng-controller="LeafletController" style="padding-top:100px">
+
+		    <leaflet center="center" markers="markers" layers="layers" width="100%" height="500" geojson="leafletGeojson"></leaflet>
+		    <div class="panel panel-default ng-hide" ng-show="relation">
+		      <div class="panel-heading">
+		        <div class="btn-group">
+		          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassWays()" translate>display ways
+		            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.ways"></i>
+		            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.waysOK"></i>
+		            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.waysKO"></i>
+		          </a>
+		          <a class="btn btn-default" ng-disabled="zoomLevel < 15" ng-click="loadOverpassBusStop()" translate>display bus stop
+		            <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.busstop"></i>
+		            <i class="fa fa-check fa-fw ng-hide" ng-show="loading.busstopOK"></i>
+		            <i class="fa fa-times fa-fw ng-hide" ng-show="loading.busstopKO"></i>
+		          </a>
+		          <a class="btn btn-danger" ng-show="overpassLayer" ng-click="removeOverpassLayer()">hide items</a>
+		        </div>
+		        <a target="_blank" ng-href="http://www.openstreetmap.org/edit#map={{center.zoom}}/{{center.lat}}/{{center.lng}}" translate class="pull-right">iD</a>
+
+		      </div>
+		      <div class="panel-body">
+		        <div class="form-inline ng-hide" ng-show="loggedin">
+		          <button ng-disabled="!currentNode" class="btn btn-primary btn-lg" ng-click="addNodeToRelation(currentNode, newIndex)">Add selected item ({{currentNode.id}}) to relation
+		          </button>
+		          <div class="form-group">
+		            <input class="form-control" type="number" ng-model="newIndex" placeholder="At index (number)"/>
+		          </div>
+		        </div>
+		        <br/>
+		        <tabset class="ng-hide" ng-show="currentNode">
+		          <tab heading="tags">
+		            <table class="table table-condensed">
+		              <tr ng-repeat="(key, value) in currentNode.properties">
+		                <td>{{key}}</td>
+		                <td>{{value}}</td>
+		              </tr>
+		            </table>
+		          </tab>
+		          <tab heading="members of {{currentNodeParents.length}} relation(s)">
+		            <div relations-table relations="currentNodeParents"></div>
+		          </tab>
+		      </div>
+		    </div>
+
+		    <div class="panel panel-default">
+		      <div class="panel-heading">GeoJSON layers</div>
+		      <div class="panel-body">
+		        <table class="table table-bordered">
+		          <tr>
+		            <th width="65%">
+		              <div class="form-group">
+		                  <input type="uri" ng-model="newGeoJSONURI" class="form-control" placeholder="geojson URI"/>
+		              </div>
+		            </th>
+		            <th>
+		              <button class="btn btn-default" ng-click="addGeoJSON(newGeoJSONURI)">Add</button>
+		            </th>
+		          </tr>
+		          <tr ng-repeat="geojson in settings.geojsonLayers">
+		            <td><a ng-href="{{geojson}}" target="_blank">{{geojson}}</a></td>
+		            <td>
+		              <div class="btn-group">
+		                <button class="btn btn-danger" ng-click="removeGeoJSON(geojson)">delete
+		                    <i class="fa fa-trash-o"></i>
+		                </button>
+		                <button class="btn btn-default" ng-click="hideGeoJSON(geojson)">hide</button>
+		                <button class="btn btn-default" ng-click="displayGeoJSON(geojson)">display</button>
+		              </div>
+		            </td>
+		          </tr>
+		        </table>
+		      </div>
+		    </div>
+		    <br/>
+		  </div>
 		</div>
 	</div>
-	<div class="col-md-5">
-		<div class="panel panel-default ng-hide" ng-show="relation">
-			<div class="panel-heading">Tags</div>
-			<div class="panel-body">
-				<div tags-table tags="relation.tags"></div>
-			</div>
-		</div>
-	</div>
 </div>
-<div class="row" ng-controller="RelationSearchController">
-  <div class="col-md-7">
-<div class="panel panel-default">
-  <div class="panel-heading">Search for relations (overpass)</div>
-  <div class="panel-body" ui-keypress="{13:'search()'}">
-    <div class="form-group">
-      <label>Name</label>
-      <input type="text" class="form-control" ng-model="name"/>
-    </div>
-    <div class="form-group">
-      <label>Network</label>
-      <input type="text" class="form-control" ng-model="network"/>
-    </div>
-    <div class="checkbox">
-      <label>
-        <input type="checkbox" ng-model="bbox"/> bbox
-      </label>
-    </div>
-    <div class="form-group">
-      <label>Operator</label>
-      <p class="help-block">The name of the company responsible of the searched network</p>
-      <input type="text" class="form-control" ng-model="operator"/>
-    </div>
-    <button class="btn btn-primary" ng-click="search()">Search
-        <i class="fa fa-search" ng-show="!loading.relations"></i>
-        <i class="fa fa-refresh fa-spin" ng-show="loading.relations"></i>
-        <i class="fa fa-check fa-fw text-success" ng-show="loading.relationssuccess"></i>
-        <i class="fa fa-times fa-fw text-danger" ng-show="loading.relationserror"></i>
-    </button>
-    <div relations-table relations="relations"></div>
-  </div>
-</div>
-  </div>
-  <div class="col-md-5">
-    <div ng-if="bbox">
-      <leaflet height="350" width="100%"></leaflet>
-    </div>
-  </div>
-</div>
+<div search-relations></div>

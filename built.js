@@ -72,7 +72,6 @@ angular.module('osm.services').factory('leafletService',
                     if (map.hasLayer(oldLayer)){
                         map.removeLayer(oldLayer);
                     }
-                    debugger;
                     self.geojsonLayers[id].addTo(map);
                 });
             },
@@ -160,20 +159,11 @@ angular.module('osm.controllers').controller('LeafletController',
                 $scope.currentNode = feature;
                 //load relation that node is member of
                 if (feature.id !== undefined){
-                    var url = '/0.6/'+ osmService.getElementTypeFromFeature(feature);
-                    url += '/' + feature.id + '/relations';
-                    $scope.currentNodeParents = [];
-                    osmService.get(url).then(function(data){
-                        var relations = data.getElementsByTagName('relation');
-                        for (var i = 0; i < relations.length; i++) {
-                            $scope.currentNodeParents.push({
-                                type: 'relation',
-                                ref: relations[i].getAttribute('id'),
-                                name: osmService.getNameFromTags(relations[i])
-                            });
-                        }
-                    }, function(error){
-                        console.error(error);
+                    $scope.getParentRelations(
+                        osmService.getElementTypeFromFeature(feature),
+                        feature.id
+                    ).then(function(parents){
+                        $scope.currentNodeParents = parents;
                     });
                 }
             });
@@ -378,18 +368,18 @@ angular.module('osm.controllers').controller('LeafletController',
 /*global angular:false */
 
 angular.module('osm').config(['$routeProvider', function($routeProvider) {
-    $routeProvider.when('/:mainRelationId/:masterRelationId/:lineRelationId', {
-        templateUrl: 'partials/line.html',
+    $routeProvider.when('/:mainRelationId', {
+        templateUrl: 'partials/main.html',
         controller: 'LineRelationController'
     });
 }]);
 
 angular.module('osm.controllers').controller('LineRelationController',
-    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
+    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
+    function($scope, $q, $routeParams, $location, settingsService, osmService, leafletService){
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
-        $scope.relationID = $routeParams.lineRelationId;
+        $scope.relationID = $routeParams.mainRelationId;
         $scope.mainRelationId = $routeParams.mainRelationId;
         $scope.masterRelationId = $routeParams.masterRelationId;
         $scope.members = [];
@@ -398,7 +388,9 @@ angular.module('osm.controllers').controller('LineRelationController',
         $scope.displayedMember = 0;
         $scope.currentNode = '';
         $scope.loading = {};
+        $scope.showRelationRow = true;
         var cache = {};
+
         var getRelationFeatureById = function(id){
             if (cache.source !== $scope.relation){
                 var tmp;
@@ -540,6 +532,9 @@ angular.module('osm.controllers').controller('LineRelationController',
         $scope.fitWithSibling = function(member){
             var index = $scope.members.indexOf(member);
             var current = $scope.relation.features[index];
+            if (current === undefined){
+                return true;
+            }
             if (current.geometry.type === 'Point'){
                 return true; //not supported
             }
@@ -602,9 +597,30 @@ angular.module('osm.controllers').controller('LineRelationController',
             $scope.features = fways.concat(fnodes);
             //how could I sync geojson ?
         };
+        $scope.getParentRelations = function(relationType, relationId){
+            var deferred = $q.defer();
+            var parents = [];
+            var url = '/0.6/'+ relationType + '/' + relationId + '/relations';
+            osmService.get(url).then(function(data){
+                var relations = data.getElementsByTagName('relation');
+                for (var i = 0; i < relations.length; i++) {
+                    parents.push({
+                        type: 'relation',
+                        ref: relations[i].getAttribute('id'),
+                        name: osmService.getNameFromTags(relations[i])
+                    });
+                }
+                deferred.resolve(parents);
+            }, function(error){
+                console.error(error);
+                deferred.reject(error);
+            });
+            return deferred.promise;
+        };
         $scope.initialize = function(){
             $scope.loggedin = $scope.settings.credentials;
             if ($scope.relationID === undefined){
+                $scope.showRelationRow = false;
                 return;
             }
             $scope.loading.relation = true;
@@ -620,10 +636,10 @@ angular.module('osm.controllers').controller('LineRelationController',
                     $scope.members = $scope.relation.members;
                     $scope.howManyTags = Object.keys($scope.relation.properties).length;
                     for (var property in $scope.relation.tags){
-                    	$scope.tags.push({
-                    		k: property,
-                    		v: $scope.relation.tags[property]
-                    	});
+                        $scope.tags.push({
+                            k: property,
+                            v: $scope.relation.tags[property]
+                        });
                     }
                     $scope.relation.options.onEachFeature = onEachFeature;
                     leafletService.addGeoJSONLayer(
@@ -631,6 +647,10 @@ angular.module('osm.controllers').controller('LineRelationController',
                         $scope.relation,
                         $scope.relation.options
                     );
+                    $scope.getParentRelations('relation', $scope.relationID)
+                        .then(function(parents){
+                            $scope.parents = parents;
+                        });
                 }, function(error){
                     $scope.loading.relation = false;
                     $scope.loading.relationsuccess = false;
@@ -689,10 +709,6 @@ angular.module('osm.controllers').controller('LoginController',
 
 angular.module('osm').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/', {
-        templateUrl: 'partials/main.html',
-        controller: 'MainRelationController'
-    });
-    $routeProvider.when('/:mainRelationId', {
         templateUrl: 'partials/main.html',
         controller: 'MainRelationController'
     });
@@ -1651,8 +1667,14 @@ angular.module('osm.controllers').controller('RelationSearchController',
             $scope.loading.relationserror = false;
             $scope.relations = [];
             var query = '<osm-script output="json" timeout="10"><query type="relation">';
+            if ($scope.ref){
+                query += '<has-kv k="ref" v="' + $scope.ref + '"/>';
+            }
             if ($scope.name){
                 query += '<has-kv k="name" regv="' + $scope.name + '"/>';
+            }
+            if ($scope.state){
+                query += '<has-kv k="state" v="' + $scope.state + '"/>';
             }
             if ($scope.bbox){
                 var b = $scope.map.getBounds();

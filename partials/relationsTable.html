@@ -5,13 +5,10 @@
   </tr>
   <tr ng-repeat="relation in relations">
     <td>
-        {{relation.ref}} - {{relation.tags.name}}
+        <a ng-href="#/{{relation.ref}}">{{relation.ref}} - {{relation.tags.name}}</a>
     </td>
     <td>
       <div class="btn-group">
-        <button class="btn btn-default" ng-click="setCurrentRelation(relation)">
-          <i class="fa fa-pencil-square"></i>
-        </button>
         <div open-relation-ext relation-id="relation.ref"></div>
       </div>
     </td>

@@ -1,0 +1,49 @@
+<div class="row">
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">Search for relations (overpass)</div>
+      <div class="panel-body" ui-keypress="{13:'search()'}">
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" ng-model="bbox"/> bbox
+          </label>
+        </div>
+        <div class="form-group">
+            <label>Network</label>
+            <input type="text" class="form-control" ng-model="network"/>
+        </div>
+        <div class="form-group">
+            <label>Ref</label>
+            <input type="text" class="form-control" ng-model="ref"/>
+        </div>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" class="form-control" ng-model="name"/>
+        </div>
+        <div class="form-group">
+          <label>Operator</label>
+          <p class="help-block">The name of the company responsible of the searched network</p>
+          <input type="text" class="form-control" ng-model="operator"/>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <input type="text" class="form-control" ng-model="state"/>
+        </div>
+        <button class="btn btn-primary btn-lg" ng-click="search()">Search
+            <i class="fa fa-search" ng-show="!loading.relations"></i>
+            <i class="fa fa-refresh fa-spin" ng-show="loading.relations"></i>
+            <i class="fa fa-check fa-fw" ng-show="loading.relationssuccess"></i>
+            <i class="fa fa-times fa-fw" ng-show="loading.relationserror"></i>
+        </button>
+        <div class="list-group">
+            <a class="list-group-item" ng-repeat="relation in relations" ng-href="#/{{relation.ref}}" style="background-color: {{relation.tags.colour}}; color: {{relation.tags.text_colour}}">{{relation.tags.name}}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div ng-if="bbox">
+      <leaflet height="350" width="100%"></leaflet>
+    </div>
+  </div>
+</div>
