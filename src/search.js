@@ -27,8 +27,14 @@ angular.module('osm.controllers').controller('RelationSearchController',
             $scope.loading.relationserror = false;
             $scope.relations = [];
             var query = '<osm-script output="json" timeout="10"><query type="relation">';
+            if ($scope.ref){
+                query += '<has-kv k="ref" v="' + $scope.ref + '"/>';
+            }
             if ($scope.name){
                 query += '<has-kv k="name" regv="' + $scope.name + '"/>';
+            }
+            if ($scope.state){
+                query += '<has-kv k="state" v="' + $scope.state + '"/>';
             }
             if ($scope.bbox){
                 var b = $scope.map.getBounds();

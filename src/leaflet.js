@@ -35,7 +35,6 @@ angular.module('osm.services').factory('leafletService',
                     if (map.hasLayer(oldLayer)){
                         map.removeLayer(oldLayer);
                     }
-                    debugger;
                     self.geojsonLayers[id].addTo(map);
                 });
             },
@@ -123,20 +122,11 @@ angular.module('osm.controllers').controller('LeafletController',
                 $scope.currentNode = feature;
                 //load relation that node is member of
                 if (feature.id !== undefined){
-                    var url = '/0.6/'+ osmService.getElementTypeFromFeature(feature);
-                    url += '/' + feature.id + '/relations';
-                    $scope.currentNodeParents = [];
-                    osmService.get(url).then(function(data){
-                        var relations = data.getElementsByTagName('relation');
-                        for (var i = 0; i < relations.length; i++) {
-                            $scope.currentNodeParents.push({
-                                type: 'relation',
-                                ref: relations[i].getAttribute('id'),
-                                name: osmService.getNameFromTags(relations[i])
-                            });
-                        }
-                    }, function(error){
-                        console.error(error);
+                    $scope.getParentRelations(
+                        osmService.getElementTypeFromFeature(feature),
+                        feature.id
+                    ).then(function(parents){
+                        $scope.currentNodeParents = parents;
                     });
                 }
             });

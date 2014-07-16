@@ -7,10 +7,6 @@ angular.module('osm').config(['$routeProvider', function($routeProvider) {
         templateUrl: 'partials/main.html',
         controller: 'MainRelationController'
     });
-    $routeProvider.when('/:mainRelationId', {
-        templateUrl: 'partials/main.html',
-        controller: 'MainRelationController'
-    });
     $routeProvider.otherwise({redirectTo: '/'});
 }]);
 
