@@ -1,0 +1,16 @@
+<table class="table table-bordered ng-hide" ng-show="relations.length > 0">
+  <tr>
+    <th width="60%">ref - name</th>
+    <th width="30%">actions</th>
+  </tr>
+  <tr ng-repeat="relation in relations">
+    <td>
+        <a ng-href="#/{{relation.ref}}">{{relation.ref}} - {{relation.tags.name}}</a>
+    </td>
+    <td>
+      <div class="btn-group">
+        <div open-relation-ext relation-id="relation.ref"></div>
+      </div>
+    </td>
+  </tr>
+</table>
