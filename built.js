@@ -1715,7 +1715,13 @@ angular.module('osm.controllers').controller('RelationSearchController',
             });
         });
         var search = $location.search();
-        if (search !== undefined){
+        $scope.hasSearchParams = false;
+        for(var prop in search) {
+            if (search.hasOwnProperty(prop)) {
+                $scope.hasSearchParams = true;
+            }
+        }
+        if ($scope.hasSearchParams){
             $scope.ref = search.ref;
             $scope.name = search.name;
             $scope.bbox = search.bbox;
