@@ -1651,8 +1651,8 @@ angular.module('osm').directive('searchRelations', function(){
 });
 
 angular.module('osm.controllers').controller('RelationSearchController',
-    ['$scope', '$q', 'osmService', 'leafletService',
-    function($scope, $q, osmService, leafletService){
+    ['$scope', '$q', '$location', 'osmService', 'leafletService',
+    function($scope, $q, $location, osmService, leafletService){
         console.log('init RelationSearchController');
         $scope.relations = [];
         $scope.loading = {
@@ -1660,6 +1660,7 @@ angular.module('osm.controllers').controller('RelationSearchController',
             'relationssuccess': false,
             'relationserror': false
         };
+        $scope.orderBy = 'tags.ref';
         $scope.search = function(){
             var deferred = $q.defer();
             $scope.loading.relations = true;
@@ -1687,7 +1688,7 @@ angular.module('osm.controllers').controller('RelationSearchController',
                 query += '<has-kv k="network" regv="' + $scope.network + '"/>';
             }
             if ($scope.operator){
-                query += '<has-kv k="operator" regvv="' + $scope.operator + '"/>';
+                query += '<has-kv k="operator" regv="' + $scope.operator + '"/>';
             }
             query += '</query><print/></osm-script>';
             console.log('query to overpass: ' + query);
@@ -1713,6 +1714,16 @@ angular.module('osm.controllers').controller('RelationSearchController',
                 $scope.map = map;
             });
         });
+        var search = $location.search();
+        if (search !== undefined){
+            $scope.ref = search.ref;
+            $scope.name = search.name;
+            $scope.bbox = search.bbox;
+            $scope.state = search.state;
+            $scope.network = search.network;
+            $scope.operator = search.operator;
+            $scope.search();
+        }
     }]
 );
 

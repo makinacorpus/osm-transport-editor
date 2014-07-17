@@ -35,9 +35,6 @@
             <i class="fa fa-check fa-fw" ng-show="loading.relationssuccess"></i>
             <i class="fa fa-times fa-fw" ng-show="loading.relationserror"></i>
         </button>
-        <div class="list-group">
-            <a class="list-group-item" ng-repeat="relation in relations" ng-href="#/{{relation.ref}}" style="background-color: {{relation.tags.colour}}; color: {{relation.tags.text_colour}}">{{relation.tags.name}}</a>
-        </div>
       </div>
     </div>
   </div>
@@ -45,5 +42,25 @@
     <div ng-if="bbox">
       <leaflet height="350" width="100%"></leaflet>
     </div>
+    <h2 class="ng-hide" ng-show="loading.relations">Searching <i class="fa fa-refresh fa-spin"></i></h2>
+    <div class="ng-hide" ng-show="relations">
+        <h2>Search results</h2>
+        <div class="form-group">
+          <label>Order by</label>
+          <select class="form-control" ng-model="orderBy">
+            <option>None</option>
+            <option value="ref">Id</option>
+            <option value="tags.ref">Ref</option>
+            <option value="name">Name</option>
+            <option value="network">Network</option>
+            <option value="operator">Operator</option>
+          </select>
+        </div>
+        <p>Network - Ref - Name - Operator - State</p>
+        <div class="list-group">
+            <a class="list-group-item" ng-repeat="relation in relations | orderBy:orderBy" ng-href="#/{{relation.ref}}" style="background-color: {{relation.tags.colour}}; color: {{relation.tags.text_colour}}">{{relation.tags.network}} - {{relation.tags.ref}} - {{relation.tags.name}} - {{relation.tags.operator}} - {{relation.tags.state}}</a>
+        </div>
+    </div>
+
   </div>
 </div>
