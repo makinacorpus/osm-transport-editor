@@ -31,7 +31,7 @@ angular.module('osm.controllers').controller('DebugController',
 		$scope.displayDebugPanel = false;
 		$scope.toggleDebugPanel = function(){
 			$scope.displayDebugPanel = !$scope.displayDebugPanel;
-		}
+		};
 	}]
 );
 /*jshint strict:false */
@@ -75,7 +75,6 @@ angular.module('osm.services').factory('leafletService',
                 });
             },
             hideLayer: function(id){
-                var self = this;
                 var oldLayer = this.geojsonLayers[id];
                 leafletData.getMap().then(function(map){
                     if (map.hasLayer(oldLayer)){
@@ -87,7 +86,6 @@ angular.module('osm.services').factory('leafletService',
                 console.log('display '+ id);
                 var layer = this.geojsonLayers[id];
                 leafletData.getMap().then(function(map){
-                    debugger;
                     if (!map.hasLayer(layer)){
                         layer.addTo(map);
                     }
@@ -105,14 +103,14 @@ angular.module('osm.services').factory('leafletService',
                         layer.bindPopup(html);
                     }
                 };
-                var uri;
-                for (var i = 0; i < uris.length; i++) {
-                    uri = uris[i];
-//                    osmService.yqlJSON(uri).then(getGeoJSONLoader(uri)()); 
+                var addGeoJSONLayer = function(uri){
                     osmService.yqlJSON(uri).then(function(geojson){
                         console.log('add layer'+uri);
                         self.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                     });
+                };
+                for (var i = 0; i < uris.length; i++) {
+                    addGeoJSONLayer(uris[i]);
                 }
             },
             getBBox: function(){
@@ -154,7 +152,7 @@ angular.module('osm.controllers').controller('LeafletController',
         };
         var onEachFeature = function(feature, layer) {
             //load clicked feature as '$scope.currentNode'
-            layer.on('click', function (e) {
+            layer.on('click', function () {
                 $scope.currentNode = feature;
                 //load relation that node is member of
                 if (feature.id !== undefined){
@@ -287,7 +285,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 //var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
                 osmService.getMapGeoJSON(bbox).then(function(nodes){
                     $scope.nodes = nodes;
-                    var feature, result, newFeatures = [];
+                    var feature, newFeatures = [];
                     for (var i = 0; i < $scope.nodes.features.length; i++) {
                         feature = $scope.nodes.features[i];
                         if (!filter(feature)){
@@ -298,8 +296,7 @@ angular.module('osm.controllers').controller('LeafletController',
                     //display them on the map
                     $scope.leafletGeojson = {
                         data: $scope.nodes,
-                        pointToLayer: pointToLayer,
-                        style: style
+                        pointToLayer: pointToLayer
                     };
                 });
             });
@@ -356,15 +353,16 @@ angular.module('osm.controllers').controller('LeafletController',
         leafletService.getMap().then(function(map){
             $scope.map = map;
             leafletService.loadExternalLayers($scope.settings.geojsonLayers);
-            map.on('zoomend', function(e){
+            map.on('zoomend', function(){
                 $scope.zoomLevel = map.getZoom();
             });
-        });        
+        });
         leafletService.loadExternalLayers($scope.settings.geojsonLayers);
     }]
 );
 /*jshint strict:false */
 /*global angular:false */
+/*global L:false */
 
 angular.module('osm').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/:mainRelationId', {
@@ -379,8 +377,6 @@ angular.module('osm.controllers').controller('LineRelationController',
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
-        $scope.mainRelationId = $routeParams.mainRelationId;
-        $scope.masterRelationId = $routeParams.masterRelationId;
         $scope.members = [];
         $scope.tags = [];
         $scope.markers = {};
@@ -625,38 +621,37 @@ angular.module('osm.controllers').controller('LineRelationController',
             $scope.loading.relation = true;
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
-            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
-                function(data){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = true;
-                    $scope.loading.relationerror = false;
-                    $scope.relationXMLFull = osmService.serialiseXmlToString(data);
-                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
-                    $scope.members = $scope.relation.members;
-                    $scope.howManyTags = Object.keys($scope.relation.properties).length;
-                    for (var property in $scope.relation.tags){
-                        $scope.tags.push({
-                            k: property,
-                            v: $scope.relation.tags[property]
-                        });
-                    }
-                    $scope.relation.options.onEachFeature = onEachFeature;
-                    leafletService.addGeoJSONLayer(
-                        'relation',
-                        $scope.relation,
-                        $scope.relation.options
-                    );
-                    $scope.getParentRelations('relation', $scope.relationID)
-                        .then(function(parents){
-                            $scope.parents = parents;
-                        });
-                }, function(error){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = false;
-                    $scope.loading.relationerror = true;
-                    console.error(error);
+            var url = '/0.6/relation/' + $scope.relationID + '/full';
+            osmService.get(url).then(function(relationXML){
+                $scope.loading.relation = false;
+                $scope.loading.relationsuccess = true;
+                $scope.loading.relationerror = false;
+                $scope.relationXMLFull = osmService.serialiseXmlToString(relationXML);
+                $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, relationXML);
+                $scope.members = $scope.relation.members;
+                $scope.howManyTags = Object.keys($scope.relation.properties).length;
+                for (var property in $scope.relation.tags){
+                    $scope.tags.push({
+                        k: property,
+                        v: $scope.relation.tags[property]
+                    });
                 }
-            );
+                $scope.relation.options.onEachFeature = onEachFeature;
+                leafletService.addGeoJSONLayer(
+                    'relation',
+                    $scope.relation,
+                    $scope.relation.options
+                );
+                $scope.getParentRelations('relation', $scope.relationID)
+                    .then(function(parents){
+                        $scope.parents = parents;
+                    });
+            }, function(error){
+                $scope.loading.relation = false;
+                $scope.loading.relationsuccess = false;
+                $scope.loading.relationerror = true;
+                console.error(error);
+            });
         };
         $scope.initialize();
     }]
@@ -871,6 +866,7 @@ angular.module('osm.controllers').controller('MembersController',
 );
 /*jshint strict:false */
 /*global angular:false */
+/*global osmtogeojson:false */
 
 angular.module('osm').filter('slice', function() {
     return function(arr, start, end) {
@@ -886,15 +882,16 @@ angular.module('osm.services').factory('osmService',
     ['$base64', '$http', '$q', 'settingsService',
     function ($base64, $http, $q, settingsService) {
         var parseXml;
+        var parser;
         var serializer = new XMLSerializer();
         var API = 'http://api.openstreetmap.org/api';
 
         if (typeof window.DOMParser !== 'undefined') {
+            parser = new window.DOMParser();
             parseXml = function(xmlStr) {
-                return ( new window.DOMParser() ).parseFromString(xmlStr, 'text/xml');
+                return parser.parseFromString(xmlStr, 'application/xml');
             };
-        } else if (typeof window.ActiveXObject !== 'undefined' &&
-               new window.ActiveXObject('Microsoft.XMLDOM')) {
+        } else if (typeof window.ActiveXObject !== 'undefined') {
             parseXml = function(xmlStr) {
                 var xmlDoc = new window.ActiveXObject('Microsoft.XMLDOM');
                 xmlDoc.async = 'false';
@@ -922,7 +919,6 @@ angular.module('osm.services').factory('osmService',
             setCredentials: function(username, password){
                 settingsService.settings.username = username;
                 settingsService.settings.credentials = $base64.encode(username + ':' + password);
-                console.log(settingsService.settings.credentials);
                 return settingsService.settings.credentials;
             },
             getCredentials: function(){
@@ -935,6 +931,7 @@ angular.module('osm.services').factory('osmService',
                 settingsService.settings.credentials = '';
             },
             parseXML: function(data){
+                //bug: this return nothing with firefox ...
                 return parseXml(data);
             },
             getAuthenticated: function(method, config){
@@ -1019,7 +1016,7 @@ angular.module('osm.services').factory('osmService',
                 };
                 this.overpass(query).then(function(data){
                     //TODO check if data is XML or JSON, here it's JSON
-                    var node, feature, properties,coordinates;
+                    var node, feature, coordinates;
                     var cache = {loaded:false};
                     var getNodeById = function(id){
                         if (!cache.loaded){
@@ -1258,6 +1255,7 @@ angular.module('osm.services').factory('osmService',
                     relations: relations
                 };
                 var relation = relationXML.getElementById(relationID);
+                //bug: relation is null because firefox return an error
                 result.properties.visible = relation.getAttribute('visible');
                 result.properties.version = relation.getAttribute('version');
                 result.properties.changeset = relation.getAttribute('changeset');
@@ -1265,7 +1263,7 @@ angular.module('osm.services').factory('osmService',
                 result.properties.user = relation.getAttribute('user');
                 result.properties.uid = relation.getAttribute('uid');
                 var m, i;
-                var child, node, properties, coordinates, feature, member, memberElement, tags;
+                var child, node, properties, coordinates, feature, member, memberElement;
                 for (i = 0; i < relation.children.length; i++) {
                     m = relation.children[i];
                     if (m.tagName === 'member'){
@@ -1373,13 +1371,11 @@ angular.module('osm.services').factory('osmService',
                 var features = relationGeoJSON.features;
                 var sorted = [];
                 var f,i,m,j,k;
-                var currentFirst, currentLast, first, last;
+                var first, last;
                 var insertBefore = function(item){
-                    console.log('insert '+ item.ref + ' before');
                     sorted.splice(0, 0, item);
                 };
                 var insertAfter = function(item){
-                    console.log('insert '+item.ref + ' after');
                     sorted.push(item);
                 };
                 var getCoordinates = function(i){
@@ -1388,7 +1384,6 @@ angular.module('osm.services').factory('osmService',
                 var c, cfirst, clast, alreadySorted;
                 var foundFirst, foundLast = false;
                 for (i = 0; i < members.length; i++) {
-                    console.log(i);
                     m = members[i];
                     if (m.type !== 'way'){
                         sorted.push(m);
@@ -1431,9 +1426,6 @@ angular.module('osm.services').factory('osmService',
                         c = getCoordinates(j);
                         first = c[0];
                         last = c[c.length-1];
-                        if (i===0){
-                            console.log(m.ref + ' ' + first + ' / ' + last);
-                        }
                         if (cfirst[0] === last[0] && cfirst[1] === last[1]){
                             insertBefore(members[j]);
                             cfirst = first;
@@ -1470,7 +1462,7 @@ angular.module('osm.services').factory('osmService',
                 if (members.length === sorted.length){
                     relationGeoJSON.members = sorted;
                     //Fix orders of features
-                    var features = relationGeoJSON.features;
+                    //var features = relationGeoJSON.features;
                     var cache = {loaded:false};
                     var getFeatureById = function(id){
                         if (!cache.loaded){
@@ -1481,8 +1473,8 @@ angular.module('osm.services').factory('osmService',
                         return cache[id];
                     };
                     relationGeoJSON.features = [];
-                    for (var i = 0; i < sorted.length; i++) {
-                        relationGeoJSON.features.push(getFeatureById(sorted[i].ref));
+                    for (var l = 0; l < sorted.length; l++) {
+                        relationGeoJSON.features.push(getFeatureById(sorted[l].ref));
                     }
                     //feature order fixed
                 }else{
@@ -1494,7 +1486,7 @@ angular.module('osm.services').factory('osmService',
                 var url, config;
                 config = {
                     params: {
-                        q: "select * from json where url='" + featuresURL + "';",
+                        q: 'select * from json where url=\'' + featuresURL + '\';',
                         format: 'json'
                     }
                 };
@@ -1748,7 +1740,6 @@ angular.module('osm.services').factory('settingsService',
                 changeset: '',
                 changesetID: '',
                 osmtags: {},
-                osmfilter: [],
                 geojsonLayers:[],
                 history:[]
             })

@@ -39,7 +39,6 @@ angular.module('osm.services').factory('leafletService',
                 });
             },
             hideLayer: function(id){
-                var self = this;
                 var oldLayer = this.geojsonLayers[id];
                 leafletData.getMap().then(function(map){
                     if (map.hasLayer(oldLayer)){
@@ -51,7 +50,6 @@ angular.module('osm.services').factory('leafletService',
                 console.log('display '+ id);
                 var layer = this.geojsonLayers[id];
                 leafletData.getMap().then(function(map){
-                    debugger;
                     if (!map.hasLayer(layer)){
                         layer.addTo(map);
                     }
@@ -69,14 +67,14 @@ angular.module('osm.services').factory('leafletService',
                         layer.bindPopup(html);
                     }
                 };
-                var uri;
-                for (var i = 0; i < uris.length; i++) {
-                    uri = uris[i];
-//                    osmService.yqlJSON(uri).then(getGeoJSONLoader(uri)()); 
+                var addGeoJSONLayer = function(uri){
                     osmService.yqlJSON(uri).then(function(geojson){
                         console.log('add layer'+uri);
                         self.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                     });
+                };
+                for (var i = 0; i < uris.length; i++) {
+                    addGeoJSONLayer(uris[i]);
                 }
             },
             getBBox: function(){
@@ -118,7 +116,7 @@ angular.module('osm.controllers').controller('LeafletController',
         };
         var onEachFeature = function(feature, layer) {
             //load clicked feature as '$scope.currentNode'
-            layer.on('click', function (e) {
+            layer.on('click', function () {
                 $scope.currentNode = feature;
                 //load relation that node is member of
                 if (feature.id !== undefined){
@@ -251,7 +249,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 //var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
                 osmService.getMapGeoJSON(bbox).then(function(nodes){
                     $scope.nodes = nodes;
-                    var feature, result, newFeatures = [];
+                    var feature, newFeatures = [];
                     for (var i = 0; i < $scope.nodes.features.length; i++) {
                         feature = $scope.nodes.features[i];
                         if (!filter(feature)){
@@ -262,8 +260,7 @@ angular.module('osm.controllers').controller('LeafletController',
                     //display them on the map
                     $scope.leafletGeojson = {
                         data: $scope.nodes,
-                        pointToLayer: pointToLayer,
-                        style: style
+                        pointToLayer: pointToLayer
                     };
                 });
             });
@@ -320,10 +317,10 @@ angular.module('osm.controllers').controller('LeafletController',
         leafletService.getMap().then(function(map){
             $scope.map = map;
             leafletService.loadExternalLayers($scope.settings.geojsonLayers);
-            map.on('zoomend', function(e){
+            map.on('zoomend', function(){
                 $scope.zoomLevel = map.getZoom();
             });
-        });        
+        });
         leafletService.loadExternalLayers($scope.settings.geojsonLayers);
     }]
 );

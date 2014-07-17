@@ -1,5 +1,6 @@
 /*jshint strict:false */
 /*global angular:false */
+/*global L:false */
 
 angular.module('osm').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/:mainRelationId', {
@@ -14,8 +15,6 @@ angular.module('osm.controllers').controller('LineRelationController',
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
-        $scope.mainRelationId = $routeParams.mainRelationId;
-        $scope.masterRelationId = $routeParams.masterRelationId;
         $scope.members = [];
         $scope.tags = [];
         $scope.markers = {};
@@ -260,38 +259,37 @@ angular.module('osm.controllers').controller('LineRelationController',
             $scope.loading.relation = true;
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
-            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
-                function(data){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = true;
-                    $scope.loading.relationerror = false;
-                    $scope.relationXMLFull = osmService.serialiseXmlToString(data);
-                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
-                    $scope.members = $scope.relation.members;
-                    $scope.howManyTags = Object.keys($scope.relation.properties).length;
-                    for (var property in $scope.relation.tags){
-                        $scope.tags.push({
-                            k: property,
-                            v: $scope.relation.tags[property]
-                        });
-                    }
-                    $scope.relation.options.onEachFeature = onEachFeature;
-                    leafletService.addGeoJSONLayer(
-                        'relation',
-                        $scope.relation,
-                        $scope.relation.options
-                    );
-                    $scope.getParentRelations('relation', $scope.relationID)
-                        .then(function(parents){
-                            $scope.parents = parents;
-                        });
-                }, function(error){
-                    $scope.loading.relation = false;
-                    $scope.loading.relationsuccess = false;
-                    $scope.loading.relationerror = true;
-                    console.error(error);
+            var url = '/0.6/relation/' + $scope.relationID + '/full';
+            osmService.get(url).then(function(relationXML){
+                $scope.loading.relation = false;
+                $scope.loading.relationsuccess = true;
+                $scope.loading.relationerror = false;
+                $scope.relationXMLFull = osmService.serialiseXmlToString(relationXML);
+                $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, relationXML);
+                $scope.members = $scope.relation.members;
+                $scope.howManyTags = Object.keys($scope.relation.properties).length;
+                for (var property in $scope.relation.tags){
+                    $scope.tags.push({
+                        k: property,
+                        v: $scope.relation.tags[property]
+                    });
                 }
-            );
+                $scope.relation.options.onEachFeature = onEachFeature;
+                leafletService.addGeoJSONLayer(
+                    'relation',
+                    $scope.relation,
+                    $scope.relation.options
+                );
+                $scope.getParentRelations('relation', $scope.relationID)
+                    .then(function(parents){
+                        $scope.parents = parents;
+                    });
+            }, function(error){
+                $scope.loading.relation = false;
+                $scope.loading.relationsuccess = false;
+                $scope.loading.relationerror = true;
+                console.error(error);
+            });
         };
         $scope.initialize();
     }]

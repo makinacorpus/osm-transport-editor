@@ -5,7 +5,7 @@ var jshint = require('gulp-jshint');
 var gettext = require('gulp-angular-gettext');
 
 gulp.task('lint', function() {
-  gulp.src(['static/built.js'])
+  gulp.src(['src/*.js'])
     .pipe(jshint())
     .pipe(jshint.reporter('default'));
 });

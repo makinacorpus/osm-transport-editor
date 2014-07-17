@@ -1,5 +1,6 @@
 /*jshint strict:false */
 /*global angular:false */
+/*global osmtogeojson:false */
 
 angular.module('osm').filter('slice', function() {
     return function(arr, start, end) {
@@ -15,15 +16,16 @@ angular.module('osm.services').factory('osmService',
     ['$base64', '$http', '$q', 'settingsService',
     function ($base64, $http, $q, settingsService) {
         var parseXml;
+        var parser;
         var serializer = new XMLSerializer();
         var API = 'http://api.openstreetmap.org/api';
 
         if (typeof window.DOMParser !== 'undefined') {
+            parser = new window.DOMParser();
             parseXml = function(xmlStr) {
-                return ( new window.DOMParser() ).parseFromString(xmlStr, 'text/xml');
+                return parser.parseFromString(xmlStr, 'application/xml');
             };
-        } else if (typeof window.ActiveXObject !== 'undefined' &&
-               new window.ActiveXObject('Microsoft.XMLDOM')) {
+        } else if (typeof window.ActiveXObject !== 'undefined') {
             parseXml = function(xmlStr) {
                 var xmlDoc = new window.ActiveXObject('Microsoft.XMLDOM');
                 xmlDoc.async = 'false';
@@ -51,7 +53,6 @@ angular.module('osm.services').factory('osmService',
             setCredentials: function(username, password){
                 settingsService.settings.username = username;
                 settingsService.settings.credentials = $base64.encode(username + ':' + password);
-                console.log(settingsService.settings.credentials);
                 return settingsService.settings.credentials;
             },
             getCredentials: function(){
@@ -64,6 +65,7 @@ angular.module('osm.services').factory('osmService',
                 settingsService.settings.credentials = '';
             },
             parseXML: function(data){
+                //bug: this return nothing with firefox ...
                 return parseXml(data);
             },
             getAuthenticated: function(method, config){
@@ -148,7 +150,7 @@ angular.module('osm.services').factory('osmService',
                 };
                 this.overpass(query).then(function(data){
                     //TODO check if data is XML or JSON, here it's JSON
-                    var node, feature, properties,coordinates;
+                    var node, feature, coordinates;
                     var cache = {loaded:false};
                     var getNodeById = function(id){
                         if (!cache.loaded){
@@ -387,6 +389,7 @@ angular.module('osm.services').factory('osmService',
                     relations: relations
                 };
                 var relation = relationXML.getElementById(relationID);
+                //bug: relation is null because firefox return an error
                 result.properties.visible = relation.getAttribute('visible');
                 result.properties.version = relation.getAttribute('version');
                 result.properties.changeset = relation.getAttribute('changeset');
@@ -394,7 +397,7 @@ angular.module('osm.services').factory('osmService',
                 result.properties.user = relation.getAttribute('user');
                 result.properties.uid = relation.getAttribute('uid');
                 var m, i;
-                var child, node, properties, coordinates, feature, member, memberElement, tags;
+                var child, node, properties, coordinates, feature, member, memberElement;
                 for (i = 0; i < relation.children.length; i++) {
                     m = relation.children[i];
                     if (m.tagName === 'member'){
@@ -502,13 +505,11 @@ angular.module('osm.services').factory('osmService',
                 var features = relationGeoJSON.features;
                 var sorted = [];
                 var f,i,m,j,k;
-                var currentFirst, currentLast, first, last;
+                var first, last;
                 var insertBefore = function(item){
-                    console.log('insert '+ item.ref + ' before');
                     sorted.splice(0, 0, item);
                 };
                 var insertAfter = function(item){
-                    console.log('insert '+item.ref + ' after');
                     sorted.push(item);
                 };
                 var getCoordinates = function(i){
@@ -517,7 +518,6 @@ angular.module('osm.services').factory('osmService',
                 var c, cfirst, clast, alreadySorted;
                 var foundFirst, foundLast = false;
                 for (i = 0; i < members.length; i++) {
-                    console.log(i);
                     m = members[i];
                     if (m.type !== 'way'){
                         sorted.push(m);
@@ -560,9 +560,6 @@ angular.module('osm.services').factory('osmService',
                         c = getCoordinates(j);
                         first = c[0];
                         last = c[c.length-1];
-                        if (i===0){
-                            console.log(m.ref + ' ' + first + ' / ' + last);
-                        }
                         if (cfirst[0] === last[0] && cfirst[1] === last[1]){
                             insertBefore(members[j]);
                             cfirst = first;
@@ -599,7 +596,7 @@ angular.module('osm.services').factory('osmService',
                 if (members.length === sorted.length){
                     relationGeoJSON.members = sorted;
                     //Fix orders of features
-                    var features = relationGeoJSON.features;
+                    //var features = relationGeoJSON.features;
                     var cache = {loaded:false};
                     var getFeatureById = function(id){
                         if (!cache.loaded){
@@ -610,8 +607,8 @@ angular.module('osm.services').factory('osmService',
                         return cache[id];
                     };
                     relationGeoJSON.features = [];
-                    for (var i = 0; i < sorted.length; i++) {
-                        relationGeoJSON.features.push(getFeatureById(sorted[i].ref));
+                    for (var l = 0; l < sorted.length; l++) {
+                        relationGeoJSON.features.push(getFeatureById(sorted[l].ref));
                     }
                     //feature order fixed
                 }else{
@@ -623,7 +620,7 @@ angular.module('osm.services').factory('osmService',
                 var url, config;
                 config = {
                     params: {
-                        q: "select * from json where url='" + featuresURL + "';",
+                        q: 'select * from json where url=\'' + featuresURL + '\';',
                         format: 'json'
                     }
                 };

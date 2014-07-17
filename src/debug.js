@@ -6,6 +6,6 @@ angular.module('osm.controllers').controller('DebugController',
 		$scope.displayDebugPanel = false;
 		$scope.toggleDebugPanel = function(){
 			$scope.displayDebugPanel = !$scope.displayDebugPanel;
-		}
+		};
 	}]
 );
