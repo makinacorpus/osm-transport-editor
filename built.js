@@ -23,7 +23,6 @@ angular.module('osm.services', []);
 angular.module('osm.directives', []);
 
 
-
 /*jshint strict:false */
 /*global angular:false */
 
@@ -888,6 +887,7 @@ angular.module('osm.services').factory('osmService',
     function ($base64, $http, $q, settingsService) {
         var parseXml;
         var serializer = new XMLSerializer();
+        var API = 'http://api.openstreetmap.org/api';
 
         if (typeof window.DOMParser !== 'undefined') {
             parseXml = function(xmlStr) {
@@ -948,7 +948,7 @@ angular.module('osm.services').factory('osmService',
                 var deferred = $q.defer();
                 var self = this;
 
-                $http.get(settingsService.settings.API + method, config).then(function(data){
+                $http.get(API + method, config).then(function(data){
                     var contentType = data.headers()['content-type'];
                     var results;
                     if (contentType.indexOf('application/xml;') === 0){
@@ -972,7 +972,7 @@ angular.module('osm.services').factory('osmService',
                     config = {};
                 }
                 config.headers = {Authorization: this.getAuthorization()};
-                $http.put(settingsService.settings.API + method, content, config).then(function(data){
+                $http.put(API + method, content, config).then(function(data){
                     var contentType = data.headers()['content-type'];
                     var results;
                     if (contentType.indexOf('application/xml;') === 0){
@@ -1746,7 +1746,6 @@ angular.module('osm.services').factory('settingsService',
                 credentials: '',
                 nodes: [],
                 changeset: '',
-                API: 'http://api.openstreetmap.fr/api',
                 changesetID: '',
                 osmtags: {},
                 osmfilter: [],
