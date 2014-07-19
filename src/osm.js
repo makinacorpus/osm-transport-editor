@@ -463,9 +463,6 @@ angular.module('osm.services').factory('osmService',
                     }
                 }
                 result.tags = self.getTagsFromChildren(relation);
-                if (result.properties.colour !== undefined){
-                    result.options.color = result.properties.colour;
-                }
                 return result;
             },
             relationGeoJSONToXml: function(relationGeoJSON){

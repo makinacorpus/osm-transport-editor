@@ -275,6 +275,10 @@ angular.module('osm.controllers').controller('LineRelationController',
                     });
                 }
                 $scope.relation.options.onEachFeature = onEachFeature;
+                $scope.relation.options.style = {};
+                if ($scope.relation.tags.colour !== undefined){
+                    $scope.relation.options.style.color = $scope.relation.tags.colour;
+                }
                 leafletService.addGeoJSONLayer(
                     'relation',
                     $scope.relation,
