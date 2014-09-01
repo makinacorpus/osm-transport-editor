@@ -145,3 +145,15 @@ A relation that contains ways and node:
 		}
 	}
 
+Credits
+=======
+
+Companies
+---------
+
+* Makina-Corpus http://www.makina-corpus.com
+
+People
+------
+
+- Jean-Michel FRANCOIS aka toutpt <toutpt@gmail.com>

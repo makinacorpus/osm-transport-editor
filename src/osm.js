@@ -120,7 +120,7 @@ angular.module('osm.services').factory('osmService',
                 return deferred.promise;
             },
             overpass: function(query){
-                var url = 'http://overpass-api.de/api/interpreter';
+                var url = 'http://api.openstreetmap.fr/oapi/interpreter';
                 var deferred = $q.defer();
                 var self = this;
                 var headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'};
