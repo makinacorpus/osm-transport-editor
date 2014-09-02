@@ -7,7 +7,15 @@
 		<h1 style="background-color: {{relation.tags.colour}};color: {{relation.tags.text_colour}}">{{relation.tags.name}}
 			<a ng-href="{{relation.tags.url}}" target="_blank" class="ng-hide" ng-show="relation.tags.url"><i class="fa fa-external-link"></i></a>
 		</h1>
-        <div class="form-group" style="text-align:right">
+        <div class="form-group" style="text-align:right" ng-controller="SaveRelationController">
+        	<input class="form-control ng-hide" ng-show="deleteConfirmation" ng-model="repeatRelationId" placeholder="please write the relation ID here as confirmation and click again the delete button"/>
+        	<alert class="ng-hide" ng-show="deleteError" type="'danger'">{{deleteError.data}}</alert>
+        	<alert class="ng-hide" ng-show="saveRelationError" type="'danger'">{{saveRelationError.data}}</alert>
+        	<button ng-show="loggedin" class="btn btn-danger ng-hide" ng-click="deleteRelation()">Delete
+				<i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.delete"></i>
+				<i class="fa fa-check fa-fw ng-hide" ng-show="loading.deleteOK"></i>
+				<i class="fa fa-times fa-fw ng-hide" ng-show="loading.deleteKO"></i>
+        	</button>
 			<div class="btn-group ng-hide" dropdown ng-show="parents">
 				<button type="button" class="btn btn-default dropdown-toggle">
 			    Parents
@@ -17,7 +25,7 @@
 				</ul>
 	        </div>
         	<div open-relation-ext relation-id="relationID"></div>
-			<button ng-show="loggedin" ng-controller="SaveRelationController" class="btn btn-primary ng-hide" ng-click="saveRelation()">Save
+			<button ng-show="loggedin" class="btn btn-primary ng-hide" ng-click="saveRelation()">Save
 				<i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
 				<i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
 				<i class="fa fa-times fa-fw ng-hide" ng-show="loading.savingerror"></i>

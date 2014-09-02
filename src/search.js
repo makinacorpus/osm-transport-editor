@@ -66,6 +66,15 @@ angular.module('osm.controllers').controller('RelationSearchController',
             });
             return deferred.promise;
         };
+        $scope.setSearchParams = function(){
+            debugger;
+            $location.search('ref', $scope.ref);
+            $location.search('name', $scope.name);
+            $location.search('bbox', $scope.bbox);
+            $location.search('state', $scope.state);
+            $location.search('network', $scope.network);
+            $location.search('operator', $scope.operator);
+        };
         $scope.addRelation = function(relation){
             $scope.members.splice(0,0, relation);
         };

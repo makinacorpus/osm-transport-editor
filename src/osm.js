@@ -119,6 +119,32 @@ angular.module('osm.services').factory('osmService',
                 });
                 return deferred.promise;
             },
+            delete: function(method, config){
+                var deferred = $q.defer();
+                var self = this;
+
+                if (config === undefined){
+                    config = {};
+                }
+                config.headers = {Authorization: this.getAuthorization()};
+                config.url = API + method;
+                config.method = 'delete';
+                $http(config).then(function(data){
+                    var contentType = data.headers()['content-type'];
+                    var results;
+                    if (contentType.indexOf('application/xml;') === 0){
+                        results = self.parseXML(data.data);
+                    }else if (contentType.indexOf('text/xml;') === 0){
+                        results = self.parseXML(data.data);
+                    }else{
+                        results = data.data;
+                    }
+                    deferred.resolve(results);
+                },function(data) {
+                    deferred.reject(data);
+                });
+                return deferred.promise;
+            },
             overpass: function(query){
                 var url = 'http://api.openstreetmap.fr/oapi/interpreter';
                 var deferred = $q.defer();
