@@ -989,6 +989,32 @@ angular.module('osm.services').factory('osmService',
                 });
                 return deferred.promise;
             },
+            delete: function(method, config){
+                var deferred = $q.defer();
+                var self = this;
+
+                if (config === undefined){
+                    config = {};
+                }
+                config.headers = {Authorization: this.getAuthorization()};
+                config.url = API + method;
+                config.method = 'delete';
+                $http(config).then(function(data){
+                    var contentType = data.headers()['content-type'];
+                    var results;
+                    if (contentType.indexOf('application/xml;') === 0){
+                        results = self.parseXML(data.data);
+                    }else if (contentType.indexOf('text/xml;') === 0){
+                        results = self.parseXML(data.data);
+                    }else{
+                        results = data.data;
+                    }
+                    deferred.resolve(results);
+                },function(data) {
+                    deferred.reject(data);
+                });
+                return deferred.promise;
+            },
             overpass: function(query){
                 var url = 'http://api.openstreetmap.fr/oapi/interpreter';
                 var deferred = $q.defer();
@@ -1604,6 +1630,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
         $scope.loading.saving = false;
         $scope.loading.savingsuccess = false;
         $scope.loading.savingerror = false;
+        $scope.deleteConfirmation = false;
         $scope.saveRelation = function(){
             $scope.loading.saving = true;
             $scope.loading.savingsuccess = false;
@@ -1616,7 +1643,8 @@ angular.module('osm.controllers').controller('SaveRelationController',
                     $scope.loading.saving = false;
                     $scope.loading.savingsuccess = true;
                     $scope.loading.savingerror = false;
-                }, function(){
+                }, function(error){
+                    $scope.saveRelationError = error;
                     $scope.loading.saving = false;
                     $scope.loading.savingsuccess = false;
                     $scope.loading.savingerror = true;
@@ -1629,8 +1657,41 @@ angular.module('osm.controllers').controller('SaveRelationController',
         $scope.debug = function(){
             $scope.relationXMLOutput = $scope.getRelationXML();
         };
+        $scope.deleteRelation = function(){
+            if (!$scope.deleteConfirmation){
+                $scope.deleteConfirmation = true;
+                return;
+            }
+            $scope.loading.delete = true;
+            $scope.loading.deleteOK = false;
+            $scope.loading.deleteKO = false;
+            if ($scope.repeatRelationId !== $scope.relationID){
+                $scope.repeatRelationId = undefined;
+                $scope.loading.deleteKO = true;
+                $scope.loading.delete = false;
+                return;
+            }
+            $scope.loading.deleteOK = false;
+            $scope.loading.deleteKO = false;
+            $scope.relationXMLOutput = $scope.getRelationXML();
+            var config = {data:$scope.relationXMLOutput};
+            osmService.delete('/0.6/relation/'+ $scope.relationID, config)
+                .then(function(data){
+                    $scope.relation.properties.version = data;
+                    $scope.loading.delete = false;
+                    $scope.loading.deleteOK = true;
+                    $scope.loading.deleteKO = false;
+                }, function(error){
+                    $scope.deleteError = error;
+                    $scope.loading.delete = false;
+                    $scope.loading.deleteOK = false;
+                    $scope.loading.deleteKO = true;
+                }
+            );
+        };
     }]
 );
+
 /*jshint strict:false */
 /*global angular:false */
 
@@ -1698,6 +1759,15 @@ angular.module('osm.controllers').controller('RelationSearchController',
                 deferred.reject(error);
             });
             return deferred.promise;
+        };
+        $scope.setSearchParams = function(){
+            debugger;
+            $location.search('ref', $scope.ref);
+            $location.search('name', $scope.name);
+            $location.search('bbox', $scope.bbox);
+            $location.search('state', $scope.state);
+            $location.search('network', $scope.network);
+            $location.search('operator', $scope.operator);
         };
         $scope.addRelation = function(relation){
             $scope.members.splice(0,0, relation);
