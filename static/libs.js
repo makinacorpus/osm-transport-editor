@@ -714,7 +714,6 @@ angular.module('osm.services').factory('osmAPI',
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
                 var settings = osmSettingsService;
-                debugger;
                 var output = '<?xml version="1.0" encoding="UTF-8"?>\n';
                 output += '<osm version="0.6" generator="CGImap 0.3.3 (31468 thorn-01.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">\n';
                 output += '  <relation id="'+ pp.id + '" visible="' + pp.visible + '" ';

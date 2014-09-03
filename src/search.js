@@ -11,8 +11,8 @@ angular.module('osmTransportEditor').directive('searchRelations', function(){
 });
 
 angular.module('osmTransportEditor.controllers').controller('RelationSearchController',
-    ['$scope', '$q', '$location', 'osmAPI', 'overpassAPI', 'leafletService',
-    function($scope, $q, $location, osmAPI, overpassAPI, leafletService){
+    ['$scope', '$q', '$location', 'osmAPI', 'overpassAPI', 'leafletService', 'headerService',
+    function($scope, $q, $location, osmAPI, overpassAPI, leafletService, headerService){
         console.log('init RelationSearchController');
         $scope.relations = [];
         $scope.loading = {
@@ -22,20 +22,32 @@ angular.module('osmTransportEditor.controllers').controller('RelationSearchContr
         };
         $scope.orderBy = 'tags.ref';
         $scope.search = function(){
+            headerService.title = 'Search: ';
             var deferred = $q.defer();
             $scope.loading.relations = true;
             $scope.loading.relationssuccess = false;
             $scope.loading.relationserror = false;
             $scope.relations = [];
             var query = '<osm-script output="json" timeout="10"><query type="relation">';
+            if ($scope.operator){
+                query += '<has-kv k="operator" regv="' + $scope.operator + '"/>';
+                headerService.title += ' ' + $scope.operator;
+            }
+            if ($scope.network){
+                query += '<has-kv k="network" regv="' + $scope.network + '"/>';
+                headerService.title += ' ' + $scope.network;
+            }
             if ($scope.ref){
                 query += '<has-kv k="ref" v="' + $scope.ref + '"/>';
+                headerService.title += ' ' + $scope.ref;
             }
             if ($scope.name){
                 query += '<has-kv k="name" regv="' + $scope.name + '"/>';
+                headerService.title += ' ' + $scope.name;
             }
             if ($scope.state){
                 query += '<has-kv k="state" v="' + $scope.state + '"/>';
+                headerService.title += ' ' + $scope.state;
             }
             if ($scope.bbox){
                 var b = $scope.map.getBounds();
@@ -43,12 +55,6 @@ angular.module('osmTransportEditor.controllers').controller('RelationSearchContr
                 // s="47.1166" n="47.310" w="-1.7523" e="-1.3718
                 var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
                 query += '<bbox-query '+ bbox + '/>';
-            }
-            if ($scope.network){
-                query += '<has-kv k="network" regv="' + $scope.network + '"/>';
-            }
-            if ($scope.operator){
-                query += '<has-kv k="operator" regv="' + $scope.operator + '"/>';
             }
             query += '</query><print/></osm-script>';
             console.log('query to overpass: ' + query);

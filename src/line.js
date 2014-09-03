@@ -10,8 +10,8 @@ angular.module('osmTransportEditor').config(['$routeProvider', function($routePr
 }]);
 
 angular.module('osmTransportEditor.controllers').controller('LineRelationController',
-    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService',
-    function($scope, $q, $routeParams, $location, settingsService, osmAPI, leafletService){
+    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService', 'headerService',
+    function($scope, $q, $routeParams, $location, settingsService, osmAPI, leafletService, headerService){
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
@@ -288,6 +288,7 @@ angular.module('osmTransportEditor.controllers').controller('LineRelationControl
                     .then(function(parents){
                         $scope.parents = parents;
                     });
+                headerService.title = $scope.relation.tags.name;
             }, function(error){
                 $scope.loading.relation = false;
                 $scope.loading.relationsuccess = false;
