@@ -4,29 +4,30 @@
 'use strict';
 
 // Declare app level module which depends on filters, and services
-angular.module('osm', [
+angular.module('osmTransportEditor', [
     'ngRoute',
     'base64',
 //    'flash',
     'leaflet-directive',
-    'osm.services',
-    'osm.directives',
-    'osm.controllers',
+    'osm',
+    'osmTransportEditor.services',
+    'osmTransportEditor.directives',
+    'osmTransportEditor.controllers',
     'ui.bootstrap',
     'ui.keypress',
     'ngCookies',
     'ngStorage'
 ]);
 
-angular.module('osm.controllers', []);
-angular.module('osm.services', []);
-angular.module('osm.directives', []);
+angular.module('osmTransportEditor.controllers', []);
+angular.module('osmTransportEditor.services', []);
+angular.module('osmTransportEditor.directives', []);
 
 
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.controllers').controller('DebugController',
+angular.module('osmTransportEditor.controllers').controller('DebugController',
 	['$scope', function($scope){
 		$scope.displayDebugPanel = false;
 		$scope.toggleDebugPanel = function(){
@@ -39,8 +40,9 @@ angular.module('osm.controllers').controller('DebugController',
 /*global L:false */
 L.Icon.Default.imagePath = 'images/';
 
-angular.module('osm.services').factory('leafletService',
-    ['$q', 'leafletData', 'osmService', function($q, leafletData, osmService){
+angular.module('osmTransportEditor.services').factory('leafletService',
+    ['$q', 'leafletData', 'osmAPI',
+    function($q, leafletData, osmAPI){
         return {
             center: {lat: 47.2383, lng: -1.5603, zoom: 11},
             geojson: undefined,
@@ -104,7 +106,7 @@ angular.module('osm.services').factory('leafletService',
                     }
                 };
                 var addGeoJSONLayer = function(uri){
-                    osmService.yqlJSON(uri).then(function(geojson){
+                    osmAPI.yqlJSON(uri).then(function(geojson){
                         console.log('add layer'+uri);
                         self.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                     });
@@ -129,9 +131,9 @@ angular.module('osm.services').factory('leafletService',
     }]
 );
 
-angular.module('osm.controllers').controller('LeafletController',
-    ['$scope', '$q', 'leafletService', 'osmService', 'settingsService',
-    function($scope, $q, leafletService, osmService, settingsService){
+angular.module('osmTransportEditor.controllers').controller('LeafletController',
+    ['$scope', '$q', 'leafletService', 'osmAPI', 'settingsService', 'overpassAPI',
+    function($scope, $q, leafletService, osmAPI, settingsService, overpassAPI){
         $scope.settings = settingsService.settings;
         $scope.center = leafletService.center;
         $scope.zoomLevel = leafletService.center.zoom;
@@ -157,7 +159,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 //load relation that node is member of
                 if (feature.id !== undefined){
                     $scope.getParentRelations(
-                        osmService.getElementTypeFromFeature(feature),
+                        osmAPI.getElementTypeFromFeature(feature),
                         feature.id
                     ).then(function(parents){
                         $scope.currentNodeParents = parents;
@@ -182,7 +184,7 @@ angular.module('osm.controllers').controller('LeafletController',
             var onError = function(error){
                 deferred.reject(error);
             };
-            osmService.overpassToGeoJSON(query, filter).then(function(geojson){
+            overpassAPI.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
                     if ($scope.overpassLayer !== undefined){
                         map.removeLayer($scope.overpassLayer);
@@ -283,7 +285,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 var bbox = '' + b.getWest() + ',' + b.getSouth() + ',' + b.getEast() + ',' + b.getNorth();
                 // s="47.1166" n="47.310" w="-1.7523" e="-1.3718
                 //var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
-                osmService.getMapGeoJSON(bbox).then(function(nodes){
+                osmAPI.getMapGeoJSON(bbox).then(function(nodes){
                     $scope.nodes = nodes;
                     var feature, newFeatures = [];
                     for (var i = 0; i < $scope.nodes.features.length; i++) {
@@ -364,16 +366,16 @@ angular.module('osm.controllers').controller('LeafletController',
 /*global angular:false */
 /*global L:false */
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
+angular.module('osmTransportEditor').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/:mainRelationId', {
         templateUrl: 'partials/main.html',
         controller: 'LineRelationController'
     });
 }]);
 
-angular.module('osm.controllers').controller('LineRelationController',
-    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $q, $routeParams, $location, settingsService, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('LineRelationController',
+    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService',
+    function($scope, $q, $routeParams, $location, settingsService, osmAPI, leafletService){
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
@@ -481,7 +483,7 @@ angular.module('osm.controllers').controller('LineRelationController',
             }
         };
         $scope.sortRelationMembers = function(){
-            osmService.sortRelationMembers($scope.relation);
+            osmAPI.sortRelationMembers($scope.relation);
             $scope.members = $scope.relation.members;
         };
         //pagination
@@ -596,13 +598,13 @@ angular.module('osm.controllers').controller('LineRelationController',
             var deferred = $q.defer();
             var parents = [];
             var url = '/0.6/'+ relationType + '/' + relationId + '/relations';
-            osmService.get(url).then(function(data){
+            osmAPI.get(url).then(function(data){
                 var relations = data.getElementsByTagName('relation');
                 for (var i = 0; i < relations.length; i++) {
                     parents.push({
                         type: 'relation',
                         ref: relations[i].getAttribute('id'),
-                        name: osmService.getNameFromTags(relations[i])
+                        name: osmAPI.getNameFromTags(relations[i])
                     });
                 }
                 deferred.resolve(parents);
@@ -622,12 +624,12 @@ angular.module('osm.controllers').controller('LineRelationController',
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
             var url = '/0.6/relation/' + $scope.relationID + '/full';
-            osmService.get(url).then(function(relationXML){
+            osmAPI.get(url).then(function(relationXML){
                 $scope.loading.relation = false;
                 $scope.loading.relationsuccess = true;
                 $scope.loading.relationerror = false;
-                $scope.relationXMLFull = osmService.serialiseXmlToString(relationXML);
-                $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, relationXML);
+                $scope.relationXMLFull = osmAPI.serialiseXmlToString(relationXML);
+                $scope.relation = osmAPI.relationXmlToGeoJSON($scope.relationID, relationXML);
                 $scope.members = $scope.relation.members;
                 $scope.howManyTags = Object.keys($scope.relation.properties).length;
                 for (var property in $scope.relation.tags){
@@ -664,40 +666,49 @@ angular.module('osm.controllers').controller('LineRelationController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.controllers').controller('LoginController',
-	['$scope', 'settingsService','osmService', //'flash',
-	function($scope, settingsService, osmService){//, flash){
+angular.module('osmTransportEditor.controllers').controller('LoginController',
+	['$scope', 'osmSettingsService','osmAPI', //'flash',
+	function($scope, osmSettingsService, osmAPI){//, flash){
 		console.log('init logcontroller');
-        $scope.loggedin = osmService.getCredentials();
+        $scope.loggedin = osmAPI.getCredentials();
         $scope.mypassword = '';
-        $scope.settings = settingsService.settings;
+        $scope.username = osmSettingsService.getUserName();
+        $scope.loading = {
+            login: {loading:false, ok:false, ko:false}
+        };
         $scope.login = function(){
-            osmService.setCredentials(
-                $scope.settings.username,
+            $scope.loading.login.loading = true;
+            $scope.loading.login.ok = false;
+            $scope.loading.login.ko = false;
+            osmAPI.setCredentials(
+                $scope.username,
                 $scope.mypassword
             );
-            osmService.validateCredentials().then(function(loggedin){
+            osmAPI.validateCredentials().then(function(loggedin){
                 $scope.loggedin = loggedin;
                 if (!loggedin){
-                    //flash('error', 'login failed');
+                    $scope.loading.login.loading = false;
+                    $scope.loading.login.ok = false;
+                    $scope.loading.login.ko = true;
                 }else{
-                    //persist credentials
-                    $scope.settings.credentials = osmService.getCredentials();
+                    $scope.loading.login.loading = false;
+                    $scope.loading.login.ok = true;
+                    $scope.loading.login.ko = false;
+                    osmSettingsService.setCredentials(osmAPI.getCredentials());
                     //flash('login success');
                 }
             });
         };
         $scope.logout = function(){
-            osmService.clearCredentials();
+            osmAPI.clearCredentials();
             $scope.loggedin = false;
         };
-        if ($scope.settings.credentials && $scope.settings.username){
+        if (osmSettingsService.getCredentials() && osmSettingsService.getUserName()){
             //validate credentials
-            osmService.validateCredentials().then(function(loggedin){
+            osmAPI.validateCredentials().then(function(loggedin){
                 $scope.loggedin = loggedin;
             });
         }
-
 	}]
 );
 
@@ -705,7 +716,7 @@ angular.module('osm.controllers').controller('LoginController',
 /*global angular:false */
 
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
+angular.module('osmTransportEditor').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/', {
         templateUrl: 'partials/main.html',
         controller: 'MainRelationController'
@@ -713,9 +724,9 @@ angular.module('osm').config(['$routeProvider', function($routeProvider) {
     $routeProvider.otherwise({redirectTo: '/'});
 }]);
 
-angular.module('osm.controllers').controller('MainRelationController',
-	['$scope', '$routeParams', 'settingsService', 'osmService',
-	function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('MainRelationController',
+	['$scope', '$routeParams', 'settingsService', 'osmAPI',
+	function($scope, $routeParams, settingsService, osmAPI){
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
         $scope.members = [];
@@ -728,12 +739,12 @@ angular.module('osm.controllers').controller('MainRelationController',
             $scope.loading.relation = true;
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
-            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+            osmAPI.get('/0.6/relation/' + $scope.relationID + '/full').then(
                 function(data){
                     $scope.loading.relation = false;
                     $scope.loading.relationsuccess = true;
                     $scope.loading.relationerror = false;
-                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                    $scope.relation = osmAPI.relationXmlToGeoJSON($scope.relationID, data);
                     $scope.members = $scope.relation.members;
                 }, function(error){
                     $scope.loading.relation = false;
@@ -750,7 +761,7 @@ angular.module('osm.controllers').controller('MainRelationController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
+angular.module('osmTransportEditor').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/:mainRelationId/:masterRelationId', {
         templateUrl: 'partials/master.html',
         controller: 'MasterRelationController'
@@ -758,9 +769,9 @@ angular.module('osm').config(['$routeProvider', function($routeProvider) {
 }]);
 
 
-angular.module('osm.controllers').controller('MasterRelationController',
-	['$scope', '$routeParams', 'settingsService', 'osmService',
-	function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('MasterRelationController',
+	['$scope', '$routeParams', 'settingsService', 'osmAPI',
+	function($scope, $routeParams, settingsService, osmAPI){
         $scope.settings = settingsService.settings;
         $scope.mainRelationId = $routeParams.mainRelationId;
         $scope.masterRelationId = $routeParams.masterRelationId;
@@ -776,12 +787,12 @@ angular.module('osm.controllers').controller('MasterRelationController',
         $scope.loading.relation = true;
         $scope.loading.relationsuccess = false;
         $scope.loading.relationerror = false;
-        osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+        osmAPI.get('/0.6/relation/' + $scope.relationID + '/full').then(
             function(data){
                 $scope.loading.relation = false;
                 $scope.loading.relationsuccess = true;
                 $scope.loading.relationerror = false;
-                $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                $scope.relation = osmAPI.relationXmlToGeoJSON($scope.relationID, data);
                 $scope.members = $scope.relation.members;
                 $scope.tags = $scope.relation.tags;
             }, function(error){
@@ -797,7 +808,7 @@ angular.module('osm.controllers').controller('MasterRelationController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('moveMembers', function(){
+angular.module('osmTransportEditor').directive('moveMembers', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -805,9 +816,9 @@ angular.module('osm').directive('moveMembers', function(){
     };
 });
 
-angular.module('osm.controllers').controller('MembersController',
-    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('MembersController',
+    ['$scope', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService',
+    function($scope, $routeParams, $location, settingsService, osmAPI, leafletService){
         console.log('init MembersController');
         var moveMember = function(member, from, to) {
             $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);
@@ -872,683 +883,21 @@ angular.module('osm.controllers').controller('MembersController',
 /*global angular:false */
 /*global osmtogeojson:false */
 
-angular.module('osm').filter('slice', function() {
+angular.module('osmTransportEditor').filter('slice', function() {
     return function(arr, start, end) {
         return (arr || []).slice(start, end);
     };
 });
-angular.module('osm').filter('reverse', function() {
+angular.module('osmTransportEditor').filter('reverse', function() {
     return function(items) {
         return items.slice().reverse();
     };
 });
-angular.module('osm.services').factory('osmService',
-    ['$base64', '$http', '$q', 'settingsService',
-    function ($base64, $http, $q, settingsService) {
-        var parseXml;
-        var parser;
-        var serializer = new XMLSerializer();
-        var API = 'http://api.openstreetmap.org/api';
-
-        if (typeof window.DOMParser !== 'undefined') {
-            parser = new window.DOMParser();
-            parseXml = function(xmlStr) {
-                return parser.parseFromString(xmlStr, 'application/xml');
-            };
-        } else if (typeof window.ActiveXObject !== 'undefined') {
-            parseXml = function(xmlStr) {
-                var xmlDoc = new window.ActiveXObject('Microsoft.XMLDOM');
-                xmlDoc.async = 'false';
-                xmlDoc.loadXML(xmlStr);
-                return xmlDoc;
-            };
-        } else {
-            throw new Error('No XML parser found');
-        }
-
-        var service = {
-            validateCredentials: function(){
-                var deferred = $q.defer();
-                this.getUserDetails().then(function(data){
-                    var users = data.getElementsByTagName('user');
-                    if (users.length > 0){
-                        settingsService.settings.userid = users[0].id;
-                    }
-                    deferred.resolve(users.length > 0);
-                }, function(error){
-                    deferred.reject(error);
-                });
-                return deferred.promise;
-            },
-            setCredentials: function(username, password){
-                settingsService.settings.username = username;
-                settingsService.settings.credentials = $base64.encode(username + ':' + password);
-                return settingsService.settings.credentials;
-            },
-            getCredentials: function(){
-                return settingsService.settings.credentials;
-            },
-            getAuthorization: function(){
-                return 'Basic ' + settingsService.settings.credentials;
-            },
-            clearCredentials: function () {
-                settingsService.settings.credentials = '';
-            },
-            parseXML: function(data){
-                //bug: this return nothing with firefox ...
-                return parseXml(data);
-            },
-            getAuthenticated: function(method, config){
-                if (config === undefined){
-                    config = {};
-                }
-                config.headers = {Authorization: this.getAuthorization()};
-                return this.get(method, config);
-            },
-            get: function(method, config){
-                var deferred = $q.defer();
-                var self = this;
-
-                $http.get(API + method, config).then(function(data){
-                    var contentType = data.headers()['content-type'];
-                    var results;
-                    if (contentType.indexOf('application/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else if (contentType.indexOf('text/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else{
-                        results = data.data;
-                    }
-                    deferred.resolve(results);
-                },function(data) {
-                    deferred.reject(data);
-                });
-                return deferred.promise;
-            },
-            put: function(method, content, config){
-                var deferred = $q.defer();
-                var self = this;
-
-                if (config === undefined){
-                    config = {};
-                }
-                config.headers = {Authorization: this.getAuthorization()};
-                $http.put(API + method, content, config).then(function(data){
-                    var contentType = data.headers()['content-type'];
-                    var results;
-                    if (contentType.indexOf('application/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else if (contentType.indexOf('text/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else{
-                        results = data.data;
-                    }
-                    deferred.resolve(results);
-                },function(data) {
-                    deferred.reject(data);
-                });
-                return deferred.promise;
-            },
-            delete: function(method, config){
-                var deferred = $q.defer();
-                var self = this;
-
-                if (config === undefined){
-                    config = {};
-                }
-                config.headers = {Authorization: this.getAuthorization()};
-                config.url = API + method;
-                config.method = 'delete';
-                $http(config).then(function(data){
-                    var contentType = data.headers()['content-type'];
-                    var results;
-                    if (contentType.indexOf('application/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else if (contentType.indexOf('text/xml;') === 0){
-                        results = self.parseXML(data.data);
-                    }else{
-                        results = data.data;
-                    }
-                    deferred.resolve(results);
-                },function(data) {
-                    deferred.reject(data);
-                });
-                return deferred.promise;
-            },
-            overpass: function(query){
-                var url = 'http://api.openstreetmap.fr/oapi/interpreter';
-                var deferred = $q.defer();
-                var self = this;
-                var headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'};
-                $http.post(
-                    url,
-                    'data='+encodeURIComponent(query),
-                    {headers: headers}
-                ).then(function(data){
-                    if (typeof data.data === 'object'){
-                        deferred.resolve(data.data);
-                    }else{
-                        deferred.resolve(self.parseXML(data.data));
-                    }
-                },function(data) {
-                    deferred.reject(data);
-                });
-                return deferred.promise;
-            },
-            overpassToGeoJSON: function(query, filter){
-                var deferred = $q.defer();
-                var features = [];
-                var relations = [];
-                var result = {
-                    type: 'FeatureCollection',
-                    features: features,
-                    relations: relations
-                };
-                this.overpass(query).then(function(data){
-                    //TODO check if data is XML or JSON, here it's JSON
-                    var node, feature, coordinates;
-                    var cache = {loaded:false};
-                    var getNodeById = function(id){
-                        if (!cache.loaded){
-                            var tmp;
-                            for (var i = 0; i < data.elements.length; i++) {
-                                tmp = data.elements[i];
-                                cache[tmp.id] = tmp;
-                            }
-                        }
-                        return cache[id];
-                    };
-                    for (var i = 0; i < data.elements.length; i++) {
-                        node = data.elements[i];
-                        if (node.type === 'node'){
-                            feature = {
-                                type: 'Feature',
-                                properties:node.tags,
-                                id: node.id,
-                                geometry: {
-                                    type:'Point',
-                                    coordinates: [node.lon, node.lat]
-                                }
-                            };
-                            if (!filter(feature)){
-                                features.push(feature);
-                            }
-                        }else if (node.type === 'way'){
-                            coordinates = [];
-                            feature = {
-                                type: 'Feature',
-                                properties:node.tags,
-                                id: node.id,
-                                geometry: {
-                                    type:'LineString',
-                                    coordinates: coordinates
-                                }
-                            };
-                            for (var j = 0; j < node.nodes.length; j++) {
-                                coordinates.push([
-                                    getNodeById(node.nodes[j]).lon,
-                                    getNodeById(node.nodes[j]).lat
-                                ]);
-                            }
-                            if (!filter(feature)){
-                                features.push(feature);
-                            }
-                        }else if (node.type === 'relation'){
-                            result.relations.push({
-                                ref: node.id,
-                                tags: node.tags,
-                                type: 'relation',
-                                members: node.members
-                            });
-                        }
-                    }
-                    deferred.resolve(result);
-                }, function(error){
-                    deferred.reject(error);
-                });
-                return deferred.promise;
-            },
-            getNodesInJSON: function(xmlNodes){
-                settingsService.settings.nodes = xmlNodes;
-                return osmtogeojson(xmlNodes, {flatProperties: true});
-            },
-            createChangeset: function(comment){
-                var deferred = $q.defer();
-                var changeset = '<osm><changeset><tag k="created_by" v="OSM-Relation-Editor"/><tag k="comment" v="';
-                changeset += comment + '"/></changeset></osm>';
-                this.put('/0.6/changeset/create', changeset).then(function(data){
-                    settingsService.settings.changeset = data;
-                    deferred.resolve(data);
-                });
-                return deferred.promise;
-            },
-            getLastOpenedChangesetId: function(){
-                var deferred = $q.defer();
-                this.get('/0.6/changesets', {params:{user: settingsService.settings.userid, open: true}}).then(function(data){
-                    var changesets = data.getElementsByTagName('changeset');
-                    if (changesets.length > 0){
-                        settingsService.settings.changeset = changesets[0].id;
-                        deferred.resolve(changesets[0].id);
-                    }else{
-                        deferred.resolve();
-                    }
-                });
-                return deferred.promise;
-            },
-            closeChangeset: function(){
-                var results = this.put('/0.6/changeset/'+ settingsService.settings.changeset +'/close');
-                settingsService.settings.changeset = undefined;
-                return results;
-            },
-            getUserDetails: function(){
-                return this.getAuthenticated('/0.6/user/details');
-            },
-            getMap: function(bbox){
-                return this.get('/0.6/map?bbox='+bbox);
-            },
-            updateNode: function(currentNode, updatedNode){
-                //we need to do the diff and build the xml
-                //first try to find the node by id
-                var node = settingsService.settings.nodes.getElementById(currentNode.properties.id);
-                var deferred = $q.defer(); //only for errors
-                if (node === null){
-                    deferred.reject({
-                        msg: 'can t find node',
-                        currentNode: currentNode,
-                        updatedNode: updatedNode,
-                        osmNode: node
-                    });
-                    return deferred.promise;
-                }
-                var tag;
-                node.setAttribute('changeset', settingsService.settings.changeset);
-                node.setAttribute('user', settingsService.settings.username);
-                while (node.getElementsByTagName('tag')[0]){
-                    node.removeChild(node.getElementsByTagName('tag')[0]);
-                }
-                var osm = document.createElement('osm');
-                var value;
-                osm.appendChild(node);
-                for (var property in updatedNode.properties.tags) {
-                    if (updatedNode.properties.tags.hasOwnProperty(property)) {
-                        value = updatedNode.properties.tags[property];
-                        if (value === undefined){
-                            continue;
-                        }
-                        tag = document.createElement('tag');
-                        tag.setAttribute('k', property);
-                        tag.setAttribute('v', value);
-                        node.appendChild(tag);
-                    }
-                }
-                var nodeType;
-                if (updatedNode.geometry.type === 'Polygon'){
-                    nodeType = 'way';
-                }else if (updatedNode.geometry.type === 'Point'){
-                    nodeType = 'node';
-                }else if (updatedNode.geometry.type === 'LineString'){
-                    nodeType = 'way';
-                }else{
-                    deferred.reject({
-                        msg: 'geojson type not supported',
-                        currentNode: currentNode,
-                        updatedNode: updatedNode,
-                        osmNode: node
-                    });
-                    return deferred.promise;
-                }
-                //put request !!
-                return this.put('/0.6/' + nodeType + '/' + currentNode.properties.id, osm.outerHTML);
-            },
-            addNode: function(feature){
-                var newNode = '<osm><node changeset="CHANGESET" lat="LAT" lon="LNG">TAGS</node></osm>';
-                var tagTPL = '<tag k="KEY" v="VALUE"/>';
-                var tags = '';
-                var value;
-                newNode = newNode.replace('CHANGESET', settingsService.settings.changeset);
-                for (var property in feature.osm) {
-                    if (feature.osm.hasOwnProperty(property)) {
-                        value = feature.osm[property];
-                        if (value === undefined || value === null){
-                            continue;
-                        }else{
-                            tags = tags + tagTPL.replace('KEY', property).replace('VALUE', feature.osm[property]);
-                        }
-                    }
-                }
-                newNode = newNode.replace('TAGS', tags);
-                if (feature.geometry.type === 'Point'){
-                    newNode = newNode.replace('LNG', feature.geometry.coordinates[0]);
-                    newNode = newNode.replace('LAT', feature.geometry.coordinates[1]);
-                }else{
-                    throw new Error('Can t save sth else than Point');
-                }
-                console.log('create new node with ' + newNode);
-                return this.put('/0.6/node/create', newNode);
-            },
-            getMapGeoJSON: function(bbox){
-                var self = this;
-                var deferred = $q.defer();
-                self.getMap(bbox).then(function(xmlNodes){
-                    var geojsonNodes = self.getNodesInJSON(xmlNodes);
-                    //TODO: load row node (xml)
-/*                    var node;
-                    for (var i = 0; i < geojsonNodes.length; i++) {
-                        node = geojsonNodes[i];
-                        node.rawXMLNode = xmlNodes.getElementById(node.id.split('/')[1]);
-                    }*/
-                    deferred.resolve(geojsonNodes);
-                }, function(error){
-                    deferred.reject(error);
-                });
-                return deferred.promise;
-            },
-            serialiseXmlToString: function(xml){
-                return serializer.serializeToString(xml);
-            },
-            getTagsFromChildren: function(element){
-                var children, tags;
-                tags = {};
-                for (var i = 0; i < element.children.length; i++) {
-                    children = element.children[i];
-                    if (children.tagName !== 'tag'){
-                        continue;
-                    }
-                    tags[children.getAttribute('k')] = children.getAttribute('v');
-                }
-                return tags;
-            },
-            getNameFromTags: function(element){
-                var children;
-                for (var i = 0; i < element.children.length; i++) {
-                    children = element.children[i];
-                    if (children.tagName !== 'tag'){
-                        continue;
-                    }
-                    if (children.getAttribute('k') === 'name'){
-                        return children.getAttribute('v');
-                    }
-                }
-            },
-            relationXmlToGeoJSON: function(relationID, relationXML){
-                var self = this;
-                var features = [];
-                var relations = [];
-                var result = {
-                    type: 'FeatureCollection',
-                    properties: {
-                        id: relationID
-                    },
-                    options: {},
-                    members:[],
-                    features: features,
-                    relations: relations
-                };
-                var relation = relationXML.getElementById(relationID);
-                //bug: relation is null because firefox return an error
-                result.properties.visible = relation.getAttribute('visible');
-                result.properties.version = relation.getAttribute('version');
-                result.properties.changeset = relation.getAttribute('changeset');
-                result.properties.timestamp = relation.getAttribute('timestamp');
-                result.properties.user = relation.getAttribute('user');
-                result.properties.uid = relation.getAttribute('uid');
-                var m, i;
-                var child, node, properties, coordinates, feature, member, memberElement;
-                for (i = 0; i < relation.children.length; i++) {
-                    m = relation.children[i];
-                    if (m.tagName === 'member'){
-                        //<member type="way" ref="148934766" role=""/>
-                        member = {
-                            type: m.getAttribute('type'),
-                            ref: m.getAttribute('ref'),
-                            role: m.getAttribute('role'),
-                        };
-                        result.members.push(member);
-                        //get relationXML for this member
-                        memberElement = relationXML.getElementById(m.getAttribute('ref'));
-                        /*
-                        <way id="148934766" visible="true" version="5" changeset="13626362" timestamp="2012-10-25T11:48:27Z" user="Metacity" uid="160224">
-                          <nd ref="1619955810"/>
-                          ...
-                          <tag k="access" v="yes"/>
-                          ...
-                        </way>
-                         */
-                        //get tags -> geojson properties
-                        properties = self.getTagsFromChildren(memberElement);
-                        member.name = properties.name;
-                        if (memberElement.tagName === 'way'){
-                            coordinates = [];
-                            feature = {
-                                type: 'Feature',
-                                properties: properties,
-                                id: m.getAttribute('ref'),
-                                geometry:{
-                                    type:'LineString',
-                                    coordinates:coordinates
-                                }
-                            };
-                            for (var j = 0; j < memberElement.children.length; j++) {
-                                child = memberElement.children[j];
-                                if (child.tagName === 'nd'){
-                                    node = relationXML.getElementById(child.getAttribute('ref'));
-                                    coordinates.push([
-                                        parseFloat(node.getAttribute('lon')),
-                                        parseFloat(node.getAttribute('lat'))
-                                    ]);
-                                }
-                            }
-                            features.push(feature);
-                        }else if (memberElement.tagName === 'node'){
-                            feature = {
-                                type: 'Feature',
-                                properties: properties,
-                                id: m.getAttribute('ref'),
-                                geometry:{
-                                    type:'Point',
-                                    coordinates:[
-                                        parseFloat(memberElement.getAttribute('lon')),
-                                        parseFloat(memberElement.getAttribute('lat'))
-                                    ]
-                                }
-                            };
-                            features.push(feature);
-                        }else if (memberElement.tagName === 'relation'){
-                            member.tags = properties;
-                        }
-                    }
-                }
-                result.tags = self.getTagsFromChildren(relation);
-                return result;
-            },
-            relationGeoJSONToXml: function(relationGeoJSON){
-                var i;
-                var pp = relationGeoJSON.properties;
-                var members = relationGeoJSON.members;
-                var settings = settingsService.settings;
-                var output = '<?xml version="1.0" encoding="UTF-8"?>\n';
-                output += '<osm version="0.6" generator="CGImap 0.3.3 (31468 thorn-01.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">\n';
-                output += '  <relation id="'+ pp.id + '" visible="' + pp.visible + '" ';
-                output += 'version="' + pp.version + '" ';
-                output += 'changeset="'+settings.changeset +'" timestamp="' + new Date().toISOString() + '" ';
-                output += 'user="' + settings.username + '" uid="' + pp.uid + '">\n';
-
-                for (i = 0; i < members.length; i++) {
-                    output += '    <member type="'+ members[i].type +'" ';
-                    output += 'ref="'+members[i].ref;
-                    //role depends on the type of member
-                    if (members[i].type === 'relation'){
-                        output += '" role="'+ members[i].role+'"/>\n';
-                    }else{
-                        output += '" role="'+ members[i].role+'"/>\n';
-                    }
-                }
-
-                var tags = relationGeoJSON.tags;
-                for (var k in tags) {
-                    output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
-                }
-                output += '  </relation>\n';
-                output += '</osm>';
-                return output;
-            },
-            sortRelationMembers: function(relationGeoJSON){
-                //sort members
-                var members = relationGeoJSON.members;
-                var features = relationGeoJSON.features;
-                var sorted = [];
-                var f,i,m,j,k;
-                var first, last;
-                var insertBefore = function(item){
-                    sorted.splice(0, 0, item);
-                };
-                var insertAfter = function(item){
-                    sorted.push(item);
-                };
-                var getCoordinates = function(i){
-                    return features[i].geometry.coordinates;
-                };
-                var c, cfirst, clast, alreadySorted;
-                var foundFirst, foundLast = false;
-                for (i = 0; i < members.length; i++) {
-                    m = members[i];
-                    if (m.type !== 'way'){
-                        sorted.push(m);
-                        continue;
-                    }
-                    //check if the member is already in
-                    alreadySorted = false;
-                    for (k = 0; k < sorted.length; k++) {
-                        if (sorted[k].ref === m.ref){
-                            alreadySorted = true;
-                        }
-                    }
-                    if (alreadySorted){
-                        continue;
-                    }
-                    if (sorted.length === 0){
-                        sorted.push(m);
-                        c = getCoordinates(i);
-                        cfirst = c[0];
-                        clast = c[c.length-1];
-                    }
-//                    console.log('cfirst ' +cfirst);
-//                    console.log('clast '+ clast);
-                    foundFirst = foundLast = false;
-                    for (j = 0; j < features.length; j++) {
-                        f = features[j];
-                        if (f.geometry.type !== 'LineString'){
-                            continue;
-                        }
-                        alreadySorted = false;
-                        for (k = 0; k < sorted.length; k++) {
-                            if (sorted[k].ref === f.id){
-                                alreadySorted = true;
-                            }
-                        }
-                        if (alreadySorted){
-                            continue;
-                        }
-
-                        c = getCoordinates(j);
-                        first = c[0];
-                        last = c[c.length-1];
-                        if (cfirst[0] === last[0] && cfirst[1] === last[1]){
-                            insertBefore(members[j]);
-                            cfirst = first;
-                            foundFirst = true;
-                            continue;
-                        }
-                        if (clast[0] === first[0] && clast[1] === first[1]){
-                            insertAfter(members[j]);
-                            clast = last;
-                            foundLast = true;
-                            continue;
-                        }
-                        //weird; order of linestring coordinates is not stable
-                        if (cfirst[0] === first[0] && cfirst[1] === first[1]){
-                            insertBefore(members[j]);
-                            cfirst = last;
-                            foundFirst = true;
-                            continue;
-                        }
-                        if (clast[0] === last[0] && clast[1] === last[1]){
-                            insertAfter(members[j]);
-                            clast = first;
-                            foundLast = true;
-                            continue;
-                        }
-                    }
-                    if (!foundFirst && !foundLast){
-                        //cas du rond point ... ?
-                        console.log('not found connected ways for '+m.ref);
-                        console.log(cfirst);
-                        console.log(clast);
-                    }
-                }
-                if (members.length === sorted.length){
-                    relationGeoJSON.members = sorted;
-                    //Fix orders of features
-                    //var features = relationGeoJSON.features;
-                    var cache = {loaded:false};
-                    var getFeatureById = function(id){
-                        if (!cache.loaded){
-                            for (var i = 0; i < features.length; i++) {
-                                cache[features[i].id] = features[i];
-                            }
-                        }
-                        return cache[id];
-                    };
-                    relationGeoJSON.features = [];
-                    for (var l = 0; l < sorted.length; l++) {
-                        relationGeoJSON.features.push(getFeatureById(sorted[l].ref));
-                    }
-                    //feature order fixed
-                }else{
-                    console.error('can t sort this relation');
-                }
-            },
-            yqlJSON: function(featuresURL){
-                var deferred = $q.defer();
-                var url, config;
-                config = {
-                    params: {
-                        q: 'select * from json where url=\'' + featuresURL + '\';',
-                        format: 'json'
-                    }
-                };
-                url = 'http://query.yahooapis.com/v1/public/yql';
-                $http.get(url, config).then(
-                    function(data){
-                        if (data.data.query.results === null){
-                            deferred.resolve([]);
-                        }else{
-                            deferred.resolve(data.data.query.results.json);
-                        }
-                    }, function(error){
-                        deferred.reject(error);
-                    });
-                return deferred.promise;
-            },
-            getElementTypeFromFeature: function(feature){
-                var gtype = feature.geometry.type;
-                if (gtype === 'LineString'){
-                    return 'way';
-                }else if (gtype === 'Point'){
-                    return 'node';
-                }else{
-                    console.error('not supported type '+gtype);
-                }
-            }
-        };
-        return service;
-    }
-]);
 
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('relationsTable', function(){
+angular.module('osmTransportEditor').directive('relationsTable', function(){
     return {
         restrict: 'AE',
         replace: true,
@@ -1559,7 +908,7 @@ angular.module('osm').directive('relationsTable', function(){
         }
     };
 });
-angular.module('osm').directive('openRelationExt', function(){
+angular.module('osmTransportEditor').directive('openRelationExt', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -1570,7 +919,7 @@ angular.module('osm').directive('openRelationExt', function(){
     };
 });
 
-angular.module('osm.controllers').controller('RelationsTableController',
+angular.module('osmTransportEditor.controllers').controller('RelationsTableController',
     ['$scope', '$location', function($scope, $location){
         console.log('init RelationsTableController');
 
@@ -1588,42 +937,38 @@ angular.module('osm.controllers').controller('RelationsTableController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.controllers').controller('ChangesetController',
-    ['$scope', '$routeParams', 'settingsService', 'osmService',
-    function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('ChangesetController',
+    ['$scope', '$routeParams', 'osmSettingsService', 'osmAPI',
+    function($scope, $routeParams, osmSettingsService, osmAPI){
         console.log('init ChangesetController');
-        $scope.settings = settingsService.settings;
         $scope.relationId = $routeParams.lineRelationId || $routeParams.masterRelationId || $routeParams.mainRelationId;
         $scope.comment = 'Working on relation ' + $scope.relationId;
+        $scope.changesetID = osmSettingsService.getChangeset();
         $scope.createChangeset = function(){
-            osmService.createChangeset($scope.comment).then(
-                function(data){
-                    $scope.settings.changesetID = data;
-                }
-            );
+            return osmAPI.createChangeset($scope.comment);
         };
         $scope.getLastOpenedChangesetId = function(){
-            osmService.getLastOpenedChangesetId().then(function(data){
-                $scope.settings.changesetID = data;
-            }, function(){
-                $scope.closeChangeset();
-            });
+            return osmAPI.getLastOpenedChangesetId();
         };
         $scope.closeChangeset = function(){
-            osmService.closeChangeset().then(function(){
-                $scope.settings.changesetID = undefined;
-            });
+            osmAPI.closeChangeset();
         };
         //initialize
-        if ($scope.settings.changesetID !== '' && $scope.settings.credentials){
+        if (osmSettingsService.getChangeset() !== '' && osmSettingsService.getCredentials()){
             $scope.getLastOpenedChangesetId();
         }
+        $scope.$watch(function(){
+            if ($scope.changesetID !== osmSettingsService.getChangeset()){
+                $scope.changesetID = osmSettingsService.getChangeset();
+                return $scope.changetsetID;
+            }
+        });
     }]
 );
 
-angular.module('osm.controllers').controller('SaveRelationController',
-    ['$scope', '$routeParams', 'settingsService', 'osmService',
-    function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('SaveRelationController',
+    ['$scope', '$routeParams', 'osmSettingsService', 'osmAPI',
+    function($scope, $routeParams, osmSettingsService, osmAPI){
         $scope.relationID = $routeParams.lineRelationId ||
         $routeParams.masterRelationId ||
             $routeParams.mainRelationId;
@@ -1637,7 +982,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.savingerror = false;
             $scope.relationXMLOutput = $scope.getRelationXML();
             console.log($scope.relationXMLOutput);
-            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+            osmAPI.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
                     $scope.relation.properties.version = data;
                     $scope.loading.saving = false;
@@ -1652,7 +997,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             );
         };
         $scope.getRelationXML = function(){
-            return osmService.relationGeoJSONToXml($scope.relation);
+            return osmAPI.relationGeoJSONToXml($scope.relation);
         };
         $scope.debug = function(){
             $scope.relationXMLOutput = $scope.getRelationXML();
@@ -1675,7 +1020,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.deleteKO = false;
             $scope.relationXMLOutput = $scope.getRelationXML();
             var config = {data:$scope.relationXMLOutput};
-            osmService.delete('/0.6/relation/'+ $scope.relationID, config)
+            osmAPI.delete('/0.6/relation/'+ $scope.relationID, config)
                 .then(function(data){
                     $scope.relation.properties.version = data;
                     $scope.loading.delete = false;
@@ -1695,7 +1040,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('searchRelations', function(){
+angular.module('osmTransportEditor').directive('searchRelations', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -1704,9 +1049,9 @@ angular.module('osm').directive('searchRelations', function(){
     };
 });
 
-angular.module('osm.controllers').controller('RelationSearchController',
-    ['$scope', '$q', '$location', 'osmService', 'leafletService',
-    function($scope, $q, $location, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('RelationSearchController',
+    ['$scope', '$q', '$location', 'osmAPI', 'overpassAPI', 'leafletService',
+    function($scope, $q, $location, osmAPI, overpassAPI, leafletService){
         console.log('init RelationSearchController');
         $scope.relations = [];
         $scope.loading = {
@@ -1746,7 +1091,7 @@ angular.module('osm.controllers').controller('RelationSearchController',
             }
             query += '</query><print/></osm-script>';
             console.log('query to overpass: ' + query);
-            osmService.overpassToGeoJSON(query).then(function(data){
+            overpassAPI.overpassToGeoJSON(query).then(function(data){
                 $scope.loading.relations = false;
                 $scope.loading.relationssuccess = true;
                 $scope.loading.relationserror = false;
@@ -1761,7 +1106,6 @@ angular.module('osm.controllers').controller('RelationSearchController',
             return deferred.promise;
         };
         $scope.setSearchParams = function(){
-            debugger;
             $location.search('ref', $scope.ref);
             $location.search('name', $scope.name);
             $location.search('bbox', $scope.bbox);
@@ -1799,16 +1143,11 @@ angular.module('osm.controllers').controller('RelationSearchController',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.services').factory('settingsService',
+angular.module('osmTransportEditor.services').factory('settingsService',
     ['$localStorage', function($localStorage){
         return {
             settings: $localStorage.$default({
                 relationSelected: '',
-                username: '',
-                userid: '',
-                credentials: '',
-                nodes: [],
-                changeset: '',
                 changesetID: '',
                 osmtags: {},
                 geojsonLayers:[],
@@ -1821,7 +1160,7 @@ angular.module('osm.services').factory('settingsService',
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('tagsTable', function(){
+angular.module('osmTransportEditor').directive('tagsTable', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -1833,7 +1172,7 @@ angular.module('osm').directive('tagsTable', function(){
     };
 });
 
-angular.module('osm.controllers').controller('TagsTableController',
+angular.module('osmTransportEditor.controllers').controller('TagsTableController',
     ['$scope', 'settingsService',
     function($scope, settingsService){
         console.log('init TagsTableController');

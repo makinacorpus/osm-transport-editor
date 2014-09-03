@@ -1,7 +1,7 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('relationsTable', function(){
+angular.module('osmTransportEditor').directive('relationsTable', function(){
     return {
         restrict: 'AE',
         replace: true,
@@ -12,7 +12,7 @@ angular.module('osm').directive('relationsTable', function(){
         }
     };
 });
-angular.module('osm').directive('openRelationExt', function(){
+angular.module('osmTransportEditor').directive('openRelationExt', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -23,7 +23,7 @@ angular.module('osm').directive('openRelationExt', function(){
     };
 });
 
-angular.module('osm.controllers').controller('RelationsTableController',
+angular.module('osmTransportEditor.controllers').controller('RelationsTableController',
     ['$scope', '$location', function($scope, $location){
         console.log('init RelationsTableController');
 

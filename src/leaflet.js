@@ -3,8 +3,9 @@
 /*global L:false */
 L.Icon.Default.imagePath = 'images/';
 
-angular.module('osm.services').factory('leafletService',
-    ['$q', 'leafletData', 'osmService', function($q, leafletData, osmService){
+angular.module('osmTransportEditor.services').factory('leafletService',
+    ['$q', 'leafletData', 'osmAPI',
+    function($q, leafletData, osmAPI){
         return {
             center: {lat: 47.2383, lng: -1.5603, zoom: 11},
             geojson: undefined,
@@ -68,7 +69,7 @@ angular.module('osm.services').factory('leafletService',
                     }
                 };
                 var addGeoJSONLayer = function(uri){
-                    osmService.yqlJSON(uri).then(function(geojson){
+                    osmAPI.yqlJSON(uri).then(function(geojson){
                         console.log('add layer'+uri);
                         self.addGeoJSONLayer(uri, geojson, {onEachFeature: onEachFeature});
                     });
@@ -93,9 +94,9 @@ angular.module('osm.services').factory('leafletService',
     }]
 );
 
-angular.module('osm.controllers').controller('LeafletController',
-    ['$scope', '$q', 'leafletService', 'osmService', 'settingsService',
-    function($scope, $q, leafletService, osmService, settingsService){
+angular.module('osmTransportEditor.controllers').controller('LeafletController',
+    ['$scope', '$q', 'leafletService', 'osmAPI', 'settingsService', 'overpassAPI',
+    function($scope, $q, leafletService, osmAPI, settingsService, overpassAPI){
         $scope.settings = settingsService.settings;
         $scope.center = leafletService.center;
         $scope.zoomLevel = leafletService.center.zoom;
@@ -121,7 +122,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 //load relation that node is member of
                 if (feature.id !== undefined){
                     $scope.getParentRelations(
-                        osmService.getElementTypeFromFeature(feature),
+                        osmAPI.getElementTypeFromFeature(feature),
                         feature.id
                     ).then(function(parents){
                         $scope.currentNodeParents = parents;
@@ -146,7 +147,7 @@ angular.module('osm.controllers').controller('LeafletController',
             var onError = function(error){
                 deferred.reject(error);
             };
-            osmService.overpassToGeoJSON(query, filter).then(function(geojson){
+            overpassAPI.overpassToGeoJSON(query, filter).then(function(geojson){
                 leafletService.getMap().then(function(map){
                     if ($scope.overpassLayer !== undefined){
                         map.removeLayer($scope.overpassLayer);
@@ -247,7 +248,7 @@ angular.module('osm.controllers').controller('LeafletController',
                 var bbox = '' + b.getWest() + ',' + b.getSouth() + ',' + b.getEast() + ',' + b.getNorth();
                 // s="47.1166" n="47.310" w="-1.7523" e="-1.3718
                 //var bbox = 'w="' + b.getWest() + '" s="' + b.getSouth() + '" e="' + b.getEast() + '" n="' + b.getNorth() + '"';
-                osmService.getMapGeoJSON(bbox).then(function(nodes){
+                osmAPI.getMapGeoJSON(bbox).then(function(nodes){
                     $scope.nodes = nodes;
                     var feature, newFeatures = [];
                     for (var i = 0; i < $scope.nodes.features.length; i++) {

@@ -2,16 +2,16 @@
 /*global angular:false */
 /*global L:false */
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
+angular.module('osmTransportEditor').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/:mainRelationId', {
         templateUrl: 'partials/main.html',
         controller: 'LineRelationController'
     });
 }]);
 
-angular.module('osm.controllers').controller('LineRelationController',
-    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $q, $routeParams, $location, settingsService, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('LineRelationController',
+    ['$scope', '$q', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService',
+    function($scope, $q, $routeParams, $location, settingsService, osmAPI, leafletService){
         console.log('init RelationController');
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
@@ -119,7 +119,7 @@ angular.module('osm.controllers').controller('LineRelationController',
             }
         };
         $scope.sortRelationMembers = function(){
-            osmService.sortRelationMembers($scope.relation);
+            osmAPI.sortRelationMembers($scope.relation);
             $scope.members = $scope.relation.members;
         };
         //pagination
@@ -234,13 +234,13 @@ angular.module('osm.controllers').controller('LineRelationController',
             var deferred = $q.defer();
             var parents = [];
             var url = '/0.6/'+ relationType + '/' + relationId + '/relations';
-            osmService.get(url).then(function(data){
+            osmAPI.get(url).then(function(data){
                 var relations = data.getElementsByTagName('relation');
                 for (var i = 0; i < relations.length; i++) {
                     parents.push({
                         type: 'relation',
                         ref: relations[i].getAttribute('id'),
-                        name: osmService.getNameFromTags(relations[i])
+                        name: osmAPI.getNameFromTags(relations[i])
                     });
                 }
                 deferred.resolve(parents);
@@ -260,12 +260,12 @@ angular.module('osm.controllers').controller('LineRelationController',
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
             var url = '/0.6/relation/' + $scope.relationID + '/full';
-            osmService.get(url).then(function(relationXML){
+            osmAPI.get(url).then(function(relationXML){
                 $scope.loading.relation = false;
                 $scope.loading.relationsuccess = true;
                 $scope.loading.relationerror = false;
-                $scope.relationXMLFull = osmService.serialiseXmlToString(relationXML);
-                $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, relationXML);
+                $scope.relationXMLFull = osmAPI.serialiseXmlToString(relationXML);
+                $scope.relation = osmAPI.relationXmlToGeoJSON($scope.relationID, relationXML);
                 $scope.members = $scope.relation.members;
                 $scope.howManyTags = Object.keys($scope.relation.properties).length;
                 for (var property in $scope.relation.tags){

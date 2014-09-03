@@ -4,21 +4,22 @@
 'use strict';
 
 // Declare app level module which depends on filters, and services
-angular.module('osm', [
+angular.module('osmTransportEditor', [
     'ngRoute',
     'base64',
 //    'flash',
     'leaflet-directive',
-    'osm.services',
-    'osm.directives',
-    'osm.controllers',
+    'osm',
+    'osmTransportEditor.services',
+    'osmTransportEditor.directives',
+    'osmTransportEditor.controllers',
     'ui.bootstrap',
     'ui.keypress',
     'ngCookies',
     'ngStorage'
 ]);
 
-angular.module('osm.controllers', []);
-angular.module('osm.services', []);
-angular.module('osm.directives', []);
+angular.module('osmTransportEditor.controllers', []);
+angular.module('osmTransportEditor.services', []);
+angular.module('osmTransportEditor.directives', []);
 

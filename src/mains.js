@@ -2,7 +2,7 @@
 /*global angular:false */
 
 
-angular.module('osm').config(['$routeProvider', function($routeProvider) {
+angular.module('osmTransportEditor').config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/', {
         templateUrl: 'partials/main.html',
         controller: 'MainRelationController'
@@ -10,9 +10,9 @@ angular.module('osm').config(['$routeProvider', function($routeProvider) {
     $routeProvider.otherwise({redirectTo: '/'});
 }]);
 
-angular.module('osm.controllers').controller('MainRelationController',
-	['$scope', '$routeParams', 'settingsService', 'osmService',
-	function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('MainRelationController',
+	['$scope', '$routeParams', 'settingsService', 'osmAPI',
+	function($scope, $routeParams, settingsService, osmAPI){
         $scope.settings = settingsService.settings;
         $scope.relationID = $routeParams.mainRelationId;
         $scope.members = [];
@@ -25,12 +25,12 @@ angular.module('osm.controllers').controller('MainRelationController',
             $scope.loading.relation = true;
             $scope.loading.relationsuccess = false;
             $scope.loading.relationerror = false;
-            osmService.get('/0.6/relation/' + $scope.relationID + '/full').then(
+            osmAPI.get('/0.6/relation/' + $scope.relationID + '/full').then(
                 function(data){
                     $scope.loading.relation = false;
                     $scope.loading.relationsuccess = true;
                     $scope.loading.relationerror = false;
-                    $scope.relation = osmService.relationXmlToGeoJSON($scope.relationID, data);
+                    $scope.relation = osmAPI.relationXmlToGeoJSON($scope.relationID, data);
                     $scope.members = $scope.relation.members;
                 }, function(error){
                     $scope.loading.relation = false;

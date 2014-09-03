@@ -1,39 +1,48 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.controllers').controller('LoginController',
-	['$scope', 'settingsService','osmService', //'flash',
-	function($scope, settingsService, osmService){//, flash){
+angular.module('osmTransportEditor.controllers').controller('LoginController',
+	['$scope', 'osmSettingsService','osmAPI', //'flash',
+	function($scope, osmSettingsService, osmAPI){//, flash){
 		console.log('init logcontroller');
-        $scope.loggedin = osmService.getCredentials();
+        $scope.loggedin = osmAPI.getCredentials();
         $scope.mypassword = '';
-        $scope.settings = settingsService.settings;
+        $scope.username = osmSettingsService.getUserName();
+        $scope.loading = {
+            login: {loading:false, ok:false, ko:false}
+        };
         $scope.login = function(){
-            osmService.setCredentials(
-                $scope.settings.username,
+            $scope.loading.login.loading = true;
+            $scope.loading.login.ok = false;
+            $scope.loading.login.ko = false;
+            osmAPI.setCredentials(
+                $scope.username,
                 $scope.mypassword
             );
-            osmService.validateCredentials().then(function(loggedin){
+            osmAPI.validateCredentials().then(function(loggedin){
                 $scope.loggedin = loggedin;
                 if (!loggedin){
-                    //flash('error', 'login failed');
+                    $scope.loading.login.loading = false;
+                    $scope.loading.login.ok = false;
+                    $scope.loading.login.ko = true;
                 }else{
-                    //persist credentials
-                    $scope.settings.credentials = osmService.getCredentials();
+                    $scope.loading.login.loading = false;
+                    $scope.loading.login.ok = true;
+                    $scope.loading.login.ko = false;
+                    osmSettingsService.setCredentials(osmAPI.getCredentials());
                     //flash('login success');
                 }
             });
         };
         $scope.logout = function(){
-            osmService.clearCredentials();
+            osmAPI.clearCredentials();
             $scope.loggedin = false;
         };
-        if ($scope.settings.credentials && $scope.settings.username){
+        if (osmSettingsService.getCredentials() && osmSettingsService.getUserName()){
             //validate credentials
-            osmService.validateCredentials().then(function(loggedin){
+            osmAPI.validateCredentials().then(function(loggedin){
                 $scope.loggedin = loggedin;
             });
         }
-
 	}]
 );

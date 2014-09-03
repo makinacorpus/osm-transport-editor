@@ -4,42 +4,38 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm.controllers').controller('ChangesetController',
-    ['$scope', '$routeParams', 'settingsService', 'osmService',
-    function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('ChangesetController',
+    ['$scope', '$routeParams', 'osmSettingsService', 'osmAPI',
+    function($scope, $routeParams, osmSettingsService, osmAPI){
         console.log('init ChangesetController');
-        $scope.settings = settingsService.settings;
         $scope.relationId = $routeParams.lineRelationId || $routeParams.masterRelationId || $routeParams.mainRelationId;
         $scope.comment = 'Working on relation ' + $scope.relationId;
+        $scope.changesetID = osmSettingsService.getChangeset();
         $scope.createChangeset = function(){
-            osmService.createChangeset($scope.comment).then(
-                function(data){
-                    $scope.settings.changesetID = data;
-                }
-            );
+            return osmAPI.createChangeset($scope.comment);
         };
         $scope.getLastOpenedChangesetId = function(){
-            osmService.getLastOpenedChangesetId().then(function(data){
-                $scope.settings.changesetID = data;
-            }, function(){
-                $scope.closeChangeset();
-            });
+            return osmAPI.getLastOpenedChangesetId();
         };
         $scope.closeChangeset = function(){
-            osmService.closeChangeset().then(function(){
-                $scope.settings.changesetID = undefined;
-            });
+            osmAPI.closeChangeset();
         };
         //initialize
-        if ($scope.settings.changesetID !== '' && $scope.settings.credentials){
+        if (osmSettingsService.getChangeset() !== '' && osmSettingsService.getCredentials()){
             $scope.getLastOpenedChangesetId();
         }
+        $scope.$watch(function(){
+            if ($scope.changesetID !== osmSettingsService.getChangeset()){
+                $scope.changesetID = osmSettingsService.getChangeset();
+                return $scope.changetsetID;
+            }
+        });
     }]
 );
 
-angular.module('osm.controllers').controller('SaveRelationController',
-    ['$scope', '$routeParams', 'settingsService', 'osmService',
-    function($scope, $routeParams, settingsService, osmService){
+angular.module('osmTransportEditor.controllers').controller('SaveRelationController',
+    ['$scope', '$routeParams', 'osmSettingsService', 'osmAPI',
+    function($scope, $routeParams, osmSettingsService, osmAPI){
         $scope.relationID = $routeParams.lineRelationId ||
         $routeParams.masterRelationId ||
             $routeParams.mainRelationId;
@@ -53,7 +49,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.savingerror = false;
             $scope.relationXMLOutput = $scope.getRelationXML();
             console.log($scope.relationXMLOutput);
-            osmService.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
+            osmAPI.put('/0.6/relation/'+ $scope.relationID, $scope.relationXMLOutput)
                 .then(function(data){
                     $scope.relation.properties.version = data;
                     $scope.loading.saving = false;
@@ -68,7 +64,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             );
         };
         $scope.getRelationXML = function(){
-            return osmService.relationGeoJSONToXml($scope.relation);
+            return osmAPI.relationGeoJSONToXml($scope.relation);
         };
         $scope.debug = function(){
             $scope.relationXMLOutput = $scope.getRelationXML();
@@ -91,7 +87,7 @@ angular.module('osm.controllers').controller('SaveRelationController',
             $scope.loading.deleteKO = false;
             $scope.relationXMLOutput = $scope.getRelationXML();
             var config = {data:$scope.relationXMLOutput};
-            osmService.delete('/0.6/relation/'+ $scope.relationID, config)
+            osmAPI.delete('/0.6/relation/'+ $scope.relationID, config)
                 .then(function(data){
                     $scope.relation.properties.version = data;
                     $scope.loading.delete = false;

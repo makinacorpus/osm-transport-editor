@@ -1,7 +1,7 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('tagsTable', function(){
+angular.module('osmTransportEditor').directive('tagsTable', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -13,7 +13,7 @@ angular.module('osm').directive('tagsTable', function(){
     };
 });
 
-angular.module('osm.controllers').controller('TagsTableController',
+angular.module('osmTransportEditor.controllers').controller('TagsTableController',
     ['$scope', 'settingsService',
     function($scope, settingsService){
         console.log('init TagsTableController');

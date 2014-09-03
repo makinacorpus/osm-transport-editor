@@ -1,7 +1,7 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('moveMembers', function(){
+angular.module('osmTransportEditor').directive('moveMembers', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -9,9 +9,9 @@ angular.module('osm').directive('moveMembers', function(){
     };
 });
 
-angular.module('osm.controllers').controller('MembersController',
-    ['$scope', '$routeParams', '$location', 'settingsService', 'osmService', 'leafletService',
-    function($scope, $routeParams, $location, settingsService, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('MembersController',
+    ['$scope', '$routeParams', '$location', 'settingsService', 'osmAPI', 'leafletService',
+    function($scope, $routeParams, $location, settingsService, osmAPI, leafletService){
         console.log('init MembersController');
         var moveMember = function(member, from, to) {
             $scope.members.splice(to, 0, $scope.members.splice(from, 1)[0]);

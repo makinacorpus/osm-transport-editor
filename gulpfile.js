@@ -34,7 +34,8 @@ gulp.task('scripts-libs', function() {
       'bower_components/angular-route/angular-route.min.js',
       'bower_components/angular-ui-utils/keypress.min.js',
       'bower_components/restangular/dist/restangular.min.js',
-      'bower_components/ngstorage/ngStorage.min.js'
+      'bower_components/ngstorage/ngStorage.min.js',
+      'bower_components/angular-osm/dist/osm.js'
     ])
     .pipe(concat("libs.js"))
     .pipe(gulp.dest('static'));

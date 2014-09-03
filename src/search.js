@@ -1,7 +1,7 @@
 /*jshint strict:false */
 /*global angular:false */
 
-angular.module('osm').directive('searchRelations', function(){
+angular.module('osmTransportEditor').directive('searchRelations', function(){
     return {
         restrict: 'A',
         replace: true,
@@ -10,9 +10,9 @@ angular.module('osm').directive('searchRelations', function(){
     };
 });
 
-angular.module('osm.controllers').controller('RelationSearchController',
-    ['$scope', '$q', '$location', 'osmService', 'leafletService',
-    function($scope, $q, $location, osmService, leafletService){
+angular.module('osmTransportEditor.controllers').controller('RelationSearchController',
+    ['$scope', '$q', '$location', 'osmAPI', 'overpassAPI', 'leafletService',
+    function($scope, $q, $location, osmAPI, overpassAPI, leafletService){
         console.log('init RelationSearchController');
         $scope.relations = [];
         $scope.loading = {
@@ -52,7 +52,7 @@ angular.module('osm.controllers').controller('RelationSearchController',
             }
             query += '</query><print/></osm-script>';
             console.log('query to overpass: ' + query);
-            osmService.overpassToGeoJSON(query).then(function(data){
+            overpassAPI.overpassToGeoJSON(query).then(function(data){
                 $scope.loading.relations = false;
                 $scope.loading.relationssuccess = true;
                 $scope.loading.relationserror = false;
@@ -67,7 +67,6 @@ angular.module('osm.controllers').controller('RelationSearchController',
             return deferred.promise;
         };
         $scope.setSearchParams = function(){
-            debugger;
             $location.search('ref', $scope.ref);
             $location.search('name', $scope.name);
             $location.search('bbox', $scope.bbox);
