@@ -10,7 +10,7 @@ angular.module('osmTransportEditor.controllers').controller('ChangesetController
         console.log('init ChangesetController');
         $scope.relationId = $routeParams.lineRelationId || $routeParams.masterRelationId || $routeParams.mainRelationId;
         $scope.comment = 'Working on relation ' + $scope.relationId;
-        $scope.changesetID = osmSettingsService.getChangeset();
+        //$scope.changesetID = osmSettingsService.getChangeset();
         $scope.createChangeset = function(){
             return osmAPI.createChangeset($scope.comment);
         };
@@ -22,7 +22,9 @@ angular.module('osmTransportEditor.controllers').controller('ChangesetController
         };
         //initialize
         if (osmSettingsService.getChangeset() !== '' && osmSettingsService.getCredentials()){
-            $scope.getLastOpenedChangesetId();
+            $scope.getLastOpenedChangesetId().then(function(data){
+                $scope.changesetID = data;
+            });
         }
         $scope.$watch(function(){
             if ($scope.changesetID !== osmSettingsService.getChangeset()){

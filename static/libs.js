@@ -476,6 +476,7 @@ angular.module('osm.services').factory('osmAPI',
                         osmSettingsService.setChangeset(changesets[0].id);
                         deferred.resolve(changesets[0].id);
                     }else{
+                        osmSettingsService.setChangeset();
                         deferred.resolve();
                     }
                 });
@@ -709,7 +710,15 @@ angular.module('osm.services').factory('osmAPI',
                 result.tags = self.getTagsFromChildren(relation);
                 return result;
             },
+            encodeXML: function (str) {
+                return str.replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                          .replace(/'/g, '&apos;');
+            },
             relationGeoJSONToXml: function(relationGeoJSON){
+                debugger;
                 var i;
                 var pp = relationGeoJSON.properties;
                 var members = relationGeoJSON.members;
@@ -734,7 +743,7 @@ angular.module('osm.services').factory('osmAPI',
 
                 var tags = relationGeoJSON.tags;
                 for (var k in tags) {
-                    output += '    <tag k="'+ k +'" v="'+ tags[k] +'"/>\n';
+                    output += '    <tag k="'+ k +'" v="'+ this.encodeXML(tags[k]) +'"/>\n';
                 }
                 output += '  </relation>\n';
                 output += '</osm>';
