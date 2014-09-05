@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en" ng-app="osm">
-<head>
+<html lang="en" ng-app="osmTransportEditor">
+<head ng-controller="HeaderController">
   <meta charset="utf-8">
-  <title>OSM Transport Editor</title>
+  <title>{{title}}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="css/built.css" />
   <style type="text/css">
@@ -28,23 +28,27 @@
         <li><a href="http://www.makina-corpus.com">By Makina Corpus</a></li>
         <li class="ng-hide" ng-show="loggedin">
           <div class="navbar-form" ng-controller="ChangesetController">
-            <button class="btn btn-default ng-hide" ng-show="!settings.changesetID" ng-click="createChangeset()">Create change set</button>
-            <button class="btn btn-primary ng-hide" ng-show="settings.changesetID" ng-click="closeChangeset()">Save (close changeset {{settings.changesetID}})</button>
+            <button class="btn btn-default ng-hide" ng-show="!changesetID" ng-click="createChangeset()">Create change set</button>
+            <button class="btn btn-primary ng-hide" ng-show="changesetID" ng-click="closeChangeset()">Save (close changeset {{changesetID}})</button>
           </div>
         </li>
       </ul>
       <ul class="nav navbar-nav navbar-right" style="padding-right: 150px">
         <li class="ng-hide" ng-show="!loggedin">
           <div class="navbar-form">
-            <div class="form-group">
+            <div class="form-group" ui-keypress="{13:'login()'}">
               <label><i class="fa fa-user"></i></label>
-              <input type="text" name="username" class="form-control" ng-model="settings.username" placeholder="username" />
+              <input type="text" name="username" class="form-control" ng-model="username" placeholder="username" />
             </div>
-            <div class="form-group">
+            <div class="form-group" ui-keypress="{13:'login()'}">
               <input type="password" name="password" class="form-control" ng-model="mypassword" placeholder="password"/>
             </div>
             <div class="form-group">
-              <button class="form-control btn btn-primary" ng-click="login()">Login</button>
+              <button class="form-control btn btn-primary" ng-click="login()">Login
+                <i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.login.loading"></i>
+                <i class="fa fa-times ng-hide" ng-show="loading.login.ko"></i>
+                <i class="fa fa-check ng-hide" ng-show="loading.login.ok"></i>
+              </button>
             </div>
           </div>
         </li>

@@ -25,6 +25,8 @@
 				</ul>
 	        </div>
         	<div open-relation-ext relation-id="relationID"></div>
+	        <a class="btn btn-default" target="_blank" ng-href="http://www.overpass-api.de/api/sketch-line?network={{relation.tags.network}}&ref={{relation.tags.ref}}&style=paris">Sketch Line</a>
+
 			<button ng-show="loggedin" class="btn btn-primary ng-hide" ng-click="saveRelation()">Save
 				<i class="fa fa-refresh fa-spin ng-hide" ng-show="loading.saving"></i>
 				<i class="fa fa-check fa-fw ng-hide" ng-show="loading.savingsuccess"></i>
@@ -106,7 +108,7 @@
 	            </div>
 				<div class="ng-hide" ng-show="loggedin">
 		            <div move-members members="members"></div>
-		            <div class="btn-group">
+		            <div class="btn-group ng-hide">
 		              <button class="btn btn-default" ng-click="reverse()">Reverse everything</button>
 		              <button class="btn btn-default" ng-click="reverse('ways')">Reverse ways</button>
 		              <button class="btn btn-default" ng-click="reverse('nodes')">Reverse nodes</button>

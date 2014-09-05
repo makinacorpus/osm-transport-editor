@@ -2,7 +2,7 @@
   <div class="col-md-6">
     <div class="panel panel-default">
       <div class="panel-heading">Search for relations (overpass)</div>
-      <div class="panel-body" ui-keypress="{13:'search()'}">
+      <div class="panel-body" ui-keypress="{13:'setSearchParams()'}">
         <div class="checkbox">
           <label>
             <input type="checkbox" ng-model="bbox"/> bbox
@@ -58,7 +58,7 @@
         </div>
         <p>Network - Ref - Name - Operator - State</p>
         <div class="list-group">
-            <a class="list-group-item" ng-repeat="relation in relations | orderBy:orderBy" ng-href="#/{{relation.ref}}" style="background-color: {{relation.tags.colour}}; color: {{relation.tags.text_colour}}">{{relation.tags.network}} - {{relation.tags.ref}} - {{relation.tags.name}} - {{relation.tags.operator}} - {{relation.tags.state}}</a>
+            <a class="list-group-item" target="{{relation.ref}}" ng-repeat="relation in relations | orderBy:orderBy" ng-href="#/{{relation.ref}}" style="background-color: {{relation.tags.colour}}; color: {{relation.tags.text_colour}}">{{relation.tags.network}} - {{relation.tags.ref}} - {{relation.tags.name}} - {{relation.tags.operator}} - {{relation.tags.state}}</a>
         </div>
     </div>
 
