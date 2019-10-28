@@ -1,3 +1,5 @@
+This project is no more active and now require broken dependencies. The project is no more maintained.
+
 OSM Transport Editor
 ====================
 
